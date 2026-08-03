@@ -1629,10 +1629,6 @@
 
       resetAllInputs();
 
-      /*
-        進入遊戲前，讓相機直接對準玩家，
-        避免開始時從地圖左上角滑過來。
-      */
       snapCameraToPlayer();
 
       loadingPage.classList.add(
@@ -1922,10 +1918,6 @@
         player.velocityY *
         deltaTime;
 
-      /*
-        玩家使用世界座標，
-        邊界是 0～2560，而不是 0～1280。
-      */
       player.x = clamp(
         player.x,
         52,
@@ -1943,9 +1935,6 @@
         player.grounded = true;
       }
 
-      /*
-        避免玩家跳出世界上方。
-      */
       if (player.y < 100) {
         player.y = 100;
         player.velocityY = 0;
@@ -1959,13 +1948,6 @@
     ================================================== */
 
     function calculateCameraTarget() {
-      /*
-        水平位置讓玩家稍微偏左，
-        可看到更多前進方向。
-
-        VIEW_WIDTH * 0.42 約為 538，
-        玩家不會完全固定在正中央。
-      */
       const horizontalAnchor =
         VIEW_WIDTH * 0.42;
 
@@ -1980,9 +1962,6 @@
         player.y -
         verticalAnchor;
 
-      /*
-        限制相機不可超出世界範圍。
-      */
       camera.targetX = clamp(
         camera.targetX,
         0,
@@ -2011,10 +1990,6 @@
     function updateCamera(deltaTime) {
       calculateCameraTarget();
 
-      /*
-        以指數平滑方式跟隨，
-        不會因不同 FPS 產生太大差異。
-      */
       const smoothing =
         1 -
         Math.exp(
@@ -2052,7 +2027,7 @@
     }
 
     /* ==================================================
-       世界繪製
+       世界座標轉畫面座標
     ================================================== */
 
     function worldToScreenX(worldX) {
@@ -2062,6 +2037,10 @@
     function worldToScreenY(worldY) {
       return worldY - camera.y;
     }
+
+    /* ==================================================
+       世界繪製
+    ================================================== */
 
     function drawBackground() {
       const gradient =
@@ -2091,64 +2070,6 @@
         VIEW_WIDTH,
         VIEW_HEIGHT
       );
-    }
-
-    function drawParallaxBackground() {
-      /*
-        遠景移動速度比相機慢，
-        製造些微景深效果。
-      */
-      const farOffsetX =
-        camera.x * 0.18;
-
-      const farOffsetY =
-        camera.y * 0.08;
-
-      context.save();
-
-      context.fillStyle =
-        "rgba(121, 137, 166, 0.08)";
-
-      for (
-        let x = -300;
-        x < VIEW_WIDTH + 500;
-        x += 420
-      ) {
-        const drawX =
-          x -
-          (
-            farOffsetX %
-            420
-          );
-
-        context.beginPath();
-
-        context.moveTo(
-          drawX,
-          VIEW_HEIGHT -
-            140 -
-            farOffsetY
-        );
-
-        context.lineTo(
-          drawX + 180,
-          VIEW_HEIGHT -
-            420 -
-            farOffsetY
-        );
-
-        context.lineTo(
-          drawX + 370,
-          VIEW_HEIGHT -
-            140 -
-            farOffsetY
-        );
-
-        context.closePath();
-        context.fill();
-      }
-
-      context.restore();
     }
 
     function drawDungeonWalls() {
@@ -2262,9 +2183,6 @@
             pillar.y
           );
 
-        /*
-          畫面外的物件不必繪製。
-        */
         if (
           screenX < -160 ||
           screenX > VIEW_WIDTH + 160
@@ -2677,7 +2595,6 @@
       );
 
       drawBackground();
-      drawParallaxBackground();
       drawDungeonWalls();
       drawDungeonDecorations();
       drawGround();

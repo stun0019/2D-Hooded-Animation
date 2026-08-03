@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>Hooded Escape</title>
+  <title>Hooded Escape V0.5.1</title>
 
   <style>
     * {
@@ -405,6 +405,7 @@
     #loading-status.hidden {
       opacity: 0;
       transform: translateY(-10px);
+
       pointer-events: none;
     }
 
@@ -585,7 +586,8 @@
 
       pointer-events: none;
 
-      transition: opacity 0.4s ease;
+      transition:
+        opacity 0.4s ease;
     }
 
     #keyboard-settings {
@@ -612,7 +614,8 @@
       opacity: 0;
       visibility: hidden;
 
-      transition: opacity 0.4s ease;
+      transition:
+        opacity 0.4s ease;
     }
 
     #attack-key-select {
@@ -936,6 +939,7 @@
           class="action-button"
           type="button"
           data-control="attack"
+          aria-label="攻擊"
         >
           攻
         </button>
@@ -945,6 +949,7 @@
           class="action-button"
           type="button"
           data-control="jump"
+          aria-label="跳躍"
         >
           跳
         </button>
@@ -1004,7 +1009,7 @@
     context.imageSmoothingEnabled = false;
 
     /* ==================================================
-       畫面與世界
+       世界與畫面
     ================================================== */
 
     const VIEW_WIDTH = 1280;
@@ -1021,7 +1026,12 @@
     const JUMP_FORCE = 820;
 
     const PLAYER_SCALE = 2.6;
-    const ENEMY_SCALE = 1.4;
+
+    /*
+      V0.5.1：
+      ORC1 比例由 1.4 提高至 2.3。
+    */
+    const ENEMY_SCALE = 2.3;
 
     const CAMERA_FOLLOW_SPEED = 5.5;
 
@@ -1032,17 +1042,22 @@
     const ORIENTATION_FADE_TIME = 650;
 
     /* ==================================================
-       ORC1 AI 設定
+       ORC1 AI
     ================================================== */
 
     const ORC_PATROL_SPEED = 72;
     const ORC_CHASE_SPEED = 112;
 
     const ORC_DETECTION_RANGE = 390;
-    const ORC_ATTACK_RANGE = 92;
+    const ORC_ATTACK_RANGE = 105;
 
     const ORC_ATTACK_COOLDOWN = 1.1;
-    const ORC_PATROL_WAIT_TIME = 1.0;
+    const ORC_PATROL_WAIT_TIME = 1;
+
+    /*
+      大型敵人的畫面外繪製緩衝。
+    */
+    const ORC_DRAW_MARGIN = 260;
 
     /* ==================================================
        遊戲狀態
@@ -1096,7 +1111,7 @@
     };
 
     /* ==================================================
-       ORC1 敵人
+       ORC1
     ================================================== */
 
     const orc = {
@@ -1105,6 +1120,13 @@
 
       velocityX: 0,
 
+      /*
+        AI 方向定義：
+        1  = 世界右方
+        -1 = 世界左方
+
+        繪製時會另外反轉素材 X 軸。
+      */
       facing: -1,
 
       animation: "idle",
@@ -1156,7 +1178,7 @@
     };
 
     /* ==================================================
-       玩家動畫設定
+       玩家動畫
     ================================================== */
 
     const playerAnimationDefinitions = {
@@ -1210,7 +1232,7 @@
     };
 
     /* ==================================================
-       ORC1 動畫設定
+       ORC1 動畫
     ================================================== */
 
     const enemyAnimationDefinitions = {
@@ -1246,7 +1268,11 @@
        工具
     ================================================== */
 
-    function clamp(value, minimum, maximum) {
+    function clamp(
+      value,
+      minimum,
+      maximum
+    ) {
       return Math.max(
         minimum,
         Math.min(maximum, value)
@@ -1304,7 +1330,7 @@
     }
 
     /* ==================================================
-       攻擊鍵設定
+       攻擊鍵
     ================================================== */
 
     const ATTACK_KEY_STORAGE =
@@ -1356,7 +1382,7 @@
     );
 
     /* ==================================================
-       圖片載入
+       素材載入
     ================================================== */
 
     function loadImage(path) {
@@ -1791,7 +1817,9 @@
       }
     }
 
-    function updatePlayerAnimation(deltaTime) {
+    function updatePlayerAnimation(
+      deltaTime
+    ) {
       const animation =
         playerAnimations[
           player.animation
@@ -1906,7 +1934,9 @@
       }
     }
 
-    function updateOrcAnimation(deltaTime) {
+    function updateOrcAnimation(
+      deltaTime
+    ) {
       const animation =
         enemyAnimations[
           orc.animation
@@ -2094,13 +2124,17 @@
         } else {
           player.velocityX = 0;
 
-          setPlayerAnimation("idle");
+          setPlayerAnimation(
+            "idle"
+          );
         }
       } else {
         player.velocityX = 0;
 
         if (player.ducking) {
-          setPlayerAnimation("duck");
+          setPlayerAnimation(
+            "duck"
+          );
         }
       }
 
@@ -2109,7 +2143,9 @@
           GRAVITY *
           deltaTime;
 
-        setPlayerAnimation("jump");
+        setPlayerAnimation(
+          "jump"
+        );
       }
 
       player.x +=
@@ -2194,10 +2230,6 @@
           );
       }
 
-      /*
-        攻擊動畫播放期間，
-        敵人不能切換成其他動作。
-      */
       if (orc.attacking) {
         orc.velocityX = 0;
 
@@ -2215,7 +2247,7 @@
         Math.abs(differenceX);
 
       /*
-        1. 攻擊距離
+        近戰攻擊狀態。
       */
       if (
         distanceX <=
@@ -2232,12 +2264,14 @@
         if (orc.attackCooldown <= 0) {
           startOrcAttack();
         } else {
-          setOrcAnimation("idle");
+          setOrcAnimation(
+            "idle"
+          );
         }
       }
 
       /*
-        2. 偵測距離：追蹤玩家
+        追蹤玩家。
       */
       else if (
         distanceX <=
@@ -2250,17 +2284,20 @@
             ? 1
             : -1;
 
-        orc.facing = direction;
+        orc.facing =
+          direction;
 
         orc.velocityX =
           direction *
           ORC_CHASE_SPEED;
 
-        setOrcAnimation("walk");
+        setOrcAnimation(
+          "walk"
+        );
       }
 
       /*
-        3. 玩家太遠：回到巡邏
+        巡邏。
       */
       else {
         orc.state = "patrol";
@@ -2275,7 +2312,9 @@
 
           orc.velocityX = 0;
 
-          setOrcAnimation("idle");
+          setOrcAnimation(
+            "idle"
+          );
         } else {
           orc.velocityX =
             orc.patrolDirection *
@@ -2284,7 +2323,9 @@
           orc.facing =
             orc.patrolDirection;
 
-          setOrcAnimation("walk");
+          setOrcAnimation(
+            "walk"
+          );
         }
       }
 
@@ -2292,9 +2333,6 @@
         orc.velocityX *
         deltaTime;
 
-      /*
-        巡邏範圍只在非追蹤狀態生效。
-      */
       if (orc.state === "patrol") {
         if (
           orc.x <=
@@ -2335,8 +2373,8 @@
 
       orc.x = clamp(
         orc.x,
-        48,
-        WORLD_WIDTH - 48
+        80,
+        WORLD_WIDTH - 80
       );
 
       updateOrcAnimation(
@@ -2798,7 +2836,9 @@
       radiusY
     ) {
       const screenX =
-        worldToScreenX(worldX);
+        worldToScreenX(
+          worldX
+        );
 
       const screenY =
         worldToScreenY(
@@ -2940,12 +2980,15 @@
         );
 
       /*
-        畫面外不繪製，但 AI 仍可繼續運作。
+        V0.5.1：
+        擴大畫面外繪製緩衝，
+        避免 2.3 倍大型敵人在邊緣突然消失。
       */
       if (
-        screenX < -160 ||
+        screenX < -ORC_DRAW_MARGIN ||
         screenX >
-          VIEW_WIDTH + 160
+          VIEW_WIDTH +
+          ORC_DRAW_MARGIN
       ) {
         return;
       }
@@ -2965,8 +3008,12 @@
         Math.round(screenY)
       );
 
+      /*
+        ORC1 素材的原始預設朝向
+        與玩家素材相反，因此反轉 X 軸。
+      */
       context.scale(
-        orc.facing,
+        -orc.facing,
         1
       );
 
@@ -3009,7 +3056,7 @@
         16,
         22,
         294,
-        142
+        168
       );
 
       context.fillStyle =
@@ -3048,6 +3095,12 @@
         155
       );
 
+      context.fillText(
+        `ORC比例：${ENEMY_SCALE}`,
+        42,
+        181
+      );
+
       context.restore();
     }
 
@@ -3064,18 +3117,15 @@
       drawDungeonDecorations();
       drawGround();
 
-      /*
-        已移除：
-        drawWorldBoundaryMarkers();
-
-        左側 8px 半透明直條不再繪製。
-      */
-
       if (assetsLoaded) {
+        /*
+          V0.5.1：
+          ORC1 陰影同步放大。
+        */
         drawEntityShadow(
           orc.x,
-          47,
-          11
+          72,
+          16
         );
 
         drawOrc();
@@ -3391,7 +3441,7 @@
     );
 
     /* ==================================================
-       手機動作按鈕
+       手機按鈕
     ================================================== */
 
     document
@@ -3470,7 +3520,7 @@
       });
 
     /* ==================================================
-       重置輸入
+       輸入重置
     ================================================== */
 
     function resetAllInputs() {

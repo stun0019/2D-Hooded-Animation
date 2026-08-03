@@ -1,6 +1,12 @@
 "use strict";
 
-/* Loading、手機方向提示、Stage Intro、HUD、FAIL 與重生 */
+/*
+  Hooded Escape
+
+  Loading、手機方向提示、Stage Intro、
+  玩家 HUD、Debug HUD、傷害數字、
+  FAIL 與重生。
+*/
 
 /* ==================================================
    Loading
@@ -215,7 +221,9 @@ async function startLoadingSequence() {
 
     revealEnterButton();
   } catch (error) {
-    console.error(error);
+    console.error(
+      error
+    );
 
     loadingMessage.textContent =
       "素材載入失敗，請檢查圖片路徑與大小寫";
@@ -297,6 +305,7 @@ function handleOrientationState() {
 
   if (isPortrait()) {
     showOrientationScreen();
+
     return;
   }
 
@@ -405,7 +414,10 @@ async function startGame() {
   playerControlEnabled =
     false;
 
+  damageNumbers.length = 0;
+
   resetAllInputs();
+
   snapCameraToPlayer();
 
   document.body.classList.add(
@@ -442,6 +454,222 @@ enterDungeonButton.addEventListener(
   "click",
   startGame
 );
+
+/* ==================================================
+   傷害數字建立
+================================================== */
+
+function createDamageNumber(
+  value,
+  worldX,
+  worldY,
+  type = "enemy"
+) {
+  damageNumbers.push({
+    value:
+      Math.max(
+        0,
+        Math.round(
+          value
+        )
+      ),
+
+    worldX,
+    worldY,
+
+    elapsed: 0,
+
+    type
+  });
+}
+
+/* ==================================================
+   傷害數字更新
+================================================== */
+
+function updateDamageNumbers(
+  deltaTime
+) {
+  for (
+    let index =
+      damageNumbers.length - 1;
+
+    index >= 0;
+
+    index -= 1
+  ) {
+    const damageNumber =
+      damageNumbers[
+        index
+      ];
+
+    damageNumber.elapsed +=
+      deltaTime;
+
+    damageNumber.worldY -=
+      DAMAGE_NUMBER_RISE_SPEED *
+      deltaTime;
+
+    if (
+      damageNumber.elapsed >=
+      DAMAGE_NUMBER_TOTAL_TIME
+    ) {
+      damageNumbers.splice(
+        index,
+        1
+      );
+    }
+  }
+}
+
+/* ==================================================
+   傷害數字透明度
+================================================== */
+
+function getDamageNumberOpacity(
+  damageNumber
+) {
+  if (
+    damageNumber.elapsed <
+    DAMAGE_NUMBER_FADE_IN_TIME
+  ) {
+    return clamp(
+      damageNumber.elapsed /
+        DAMAGE_NUMBER_FADE_IN_TIME,
+      0,
+      1
+    );
+  }
+
+  const fadeOutStart =
+    DAMAGE_NUMBER_TOTAL_TIME -
+    DAMAGE_NUMBER_FADE_OUT_TIME;
+
+  if (
+    damageNumber.elapsed >
+    fadeOutStart
+  ) {
+    return clamp(
+      (
+        DAMAGE_NUMBER_TOTAL_TIME -
+        damageNumber.elapsed
+      ) /
+        DAMAGE_NUMBER_FADE_OUT_TIME,
+      0,
+      1
+    );
+  }
+
+  return 1;
+}
+
+/* ==================================================
+   傷害數字繪製
+================================================== */
+
+function drawDamageNumbers() {
+  if (
+    damageNumbers.length ===
+    0
+  ) {
+    return;
+  }
+
+  context.save();
+
+  context.textAlign =
+    "center";
+
+  context.textBaseline =
+    "middle";
+
+  context.font =
+    "bold 26px Arial, Microsoft JhengHei";
+
+  context.lineWidth = 5;
+
+  context.lineJoin =
+    "round";
+
+  for (
+    const damageNumber of
+    damageNumbers
+  ) {
+    const opacity =
+      getDamageNumberOpacity(
+        damageNumber
+      );
+
+    if (
+      opacity <= 0
+    ) {
+      continue;
+    }
+
+    const screenX =
+      worldToScreenX(
+        damageNumber.worldX
+      );
+
+    const screenY =
+      worldToScreenY(
+        damageNumber.worldY
+      );
+
+    if (
+      screenX < -100 ||
+      screenX >
+        VIEW_WIDTH + 100 ||
+      screenY < -100 ||
+      screenY >
+        VIEW_HEIGHT + 100
+    ) {
+      continue;
+    }
+
+    context.globalAlpha =
+      opacity;
+
+    context.strokeStyle =
+      "rgba(0,0,0,0.85)";
+
+    if (
+      damageNumber.type ===
+      "player"
+    ) {
+      context.fillStyle =
+        "#ff5964";
+    } else {
+      context.fillStyle =
+        "#fff1a8";
+    }
+
+    const text =
+      `-${damageNumber.value}`;
+
+    context.strokeText(
+      text,
+      Math.round(
+        screenX
+      ),
+      Math.round(
+        screenY
+      )
+    );
+
+    context.fillText(
+      text,
+      Math.round(
+        screenX
+      ),
+      Math.round(
+        screenY
+      )
+    );
+  }
+
+  context.restore();
+}
 
 /* ==================================================
    玩家血量 HUD
@@ -552,14 +780,33 @@ function drawDebugHud() {
     dead: "死亡"
   };
 
-  /*
-    Debug 放在玩家血條下方，
-    避免和血量介面重疊。
-  */
   const panelX = 16;
   const panelY = 84;
-  const panelWidth = 350;
-  const panelHeight = 246;
+
+  const panelWidth = 390;
+
+  const baseLineCount = 9;
+
+  const totalLineCount =
+    baseLineCount +
+    enemies.length;
+
+  const lineHeight = 26;
+
+  const panelHeight =
+    totalLineCount *
+      lineHeight +
+    20;
+
+  let aliveEnemyCount = 0;
+
+  for (
+    const enemy of enemies
+  ) {
+    if (!enemy.dead) {
+      aliveEnemyCount += 1;
+    }
+  }
 
   context.save();
 
@@ -579,81 +826,97 @@ function drawDebugHud() {
   context.font =
     "18px Arial, Microsoft JhengHei";
 
-  context.fillText(
-    `世界：${WORLD_WIDTH} × ${WORLD_HEIGHT}`,
-    42,
-    panelY + 29
+  let currentY =
+    panelY + 29;
+
+  function drawDebugLine(
+    text
+  ) {
+    context.fillText(
+      text,
+      panelX + 26,
+      currentY
+    );
+
+    currentY +=
+      lineHeight;
+  }
+
+  drawDebugLine(
+    `世界：${WORLD_WIDTH} × ${WORLD_HEIGHT}`
   );
 
-  context.fillText(
+  drawDebugLine(
     `玩家：${Math.round(
       player.x
     )}, ${Math.round(
       player.y
-    )}`,
-    42,
-    panelY + 55
+    )}`
   );
 
-  context.fillText(
-    `玩家動作：${player.animation}`,
-    42,
-    panelY + 81
+  drawDebugLine(
+    `玩家動作：${player.animation}`
   );
 
-  context.fillText(
-    `玩家 HP：${player.hp} / ${player.maxHp}`,
-    42,
-    panelY + 107
-  );
-
-  context.fillText(
-    `玩家無敵：${player.invincibleTimer.toFixed(
-      2
-    )} 秒`,
-    42,
-    panelY + 133
-  );
-
-  context.fillText(
-    `空中攻擊：${
-      player.airAttacking
+  drawDebugLine(
+    `玩家 Hurt：${
+      player.hurt
         ? "是"
         : "否"
-    }`,
-    42,
-    panelY + 159
+    }`
   );
 
-  context.fillText(
+  drawDebugLine(
+    `玩家 HP：${player.hp} / ${player.maxHp}`
+  );
+
+  drawDebugLine(
+    `玩家無敵：${player.invincibleTimer.toFixed(
+      2
+    )} 秒`
+  );
+
+  drawDebugLine(
     `玩家控制：${
       playerControlEnabled
         ? "開啟"
         : "鎖定"
-    }`,
-    42,
-    panelY + 185
+    }`
   );
 
-  context.fillText(
+  drawDebugLine(
     `相機：${Math.round(
       camera.x
     )}, ${Math.round(
       camera.y
-    )}`,
-    42,
-    panelY + 211
+    )}`
   );
 
-  context.fillText(
-    `ORC1：${
-      stateNames[
-        orc.state
-      ] || orc.state
-    }｜HP ${orc.hp} / ${orc.maxHp}`,
-    42,
-    panelY + 237
+  drawDebugLine(
+    `敵人：${aliveEnemyCount} / ${enemies.length}`
   );
+
+  for (
+    const enemy of enemies
+  ) {
+    const stateName =
+      stateNames[
+        enemy.state
+      ] ||
+      enemy.state;
+
+    const respawnText =
+      enemy.dead &&
+      enemy.opacity <= 0
+        ? `｜重生 ${enemy.respawnTimer.toFixed(
+            1
+          )} 秒`
+        : "";
+
+    drawDebugLine(
+      `${enemy.displayName}：${stateName}｜HP ${enemy.hp} / ${enemy.maxHp}${respawnText}`
+    );
+  }
 
   context.restore();
 }
@@ -681,11 +944,58 @@ function triggerFail() {
   player.velocityX = 0;
   player.velocityY = 0;
 
-  orc.velocityX = 0;
-  orc.attacking = false;
+  player.attacking = false;
+  player.airAttacking = false;
+  player.hurt = false;
+
+  for (
+    const enemy of enemies
+  ) {
+    enemy.velocityX = 0;
+    enemy.attacking = false;
+  }
 
   failScreen.classList.add(
     "visible"
+  );
+}
+
+/* ==================================================
+   重設玩家
+================================================== */
+
+function resetPlayerState() {
+  player.x =
+    player.spawnX;
+
+  player.y =
+    WORLD_GROUND_Y;
+
+  player.velocityX = 0;
+  player.velocityY = 0;
+
+  player.facing = 1;
+
+  player.grounded = true;
+  player.ducking = false;
+
+  player.attacking = false;
+  player.airAttacking = false;
+
+  player.hurt = false;
+
+  player.hp =
+    player.maxHp;
+
+  player.invincibleTimer = 0;
+
+  player
+    .attackHitEnemyIds
+    .clear();
+
+  setPlayerAnimation(
+    "idle",
+    true
   );
 }
 
@@ -710,70 +1020,16 @@ async function respawnPlayer() {
   resetAllInputs();
 
   /*
-    重設玩家。
+    清除尚未消失的傷害數字。
   */
-  player.x =
-    player.spawnX;
-
-  player.y =
-    WORLD_GROUND_Y;
-
-  player.velocityX = 0;
-  player.velocityY = 0;
-
-  player.facing = 1;
-
-  player.grounded = true;
-  player.ducking = false;
-
-  player.attacking = false;
-  player.airAttacking = false;
-
-  player.hp =
-    player.maxHp;
-
-  player.invincibleTimer = 0;
-  player.attackHitRegistered = false;
-
-  setPlayerAnimation(
-    "idle",
-    true
-  );
+  damageNumbers.length = 0;
 
   /*
-    重設 ORC。
+    重設玩家與全部敵人。
   */
-  orc.x =
-    orc.spawnX;
+  resetPlayerState();
 
-  orc.y =
-    WORLD_GROUND_Y;
-
-  orc.velocityX = 0;
-  orc.facing = -1;
-
-  orc.state = "patrol";
-
-  orc.attacking = false;
-  orc.attackCooldown = 0;
-
-  orc.patrolDirection = -1;
-  orc.patrolWaitTimer = 0;
-
-  orc.hp =
-    orc.maxHp;
-
-  orc.attackHitRegistered =
-    false;
-
-  orc.dead = false;
-  orc.opacity = 1;
-  orc.fadeTimer = 0;
-
-  setOrcAnimation(
-    "idle",
-    true
-  );
+  resetAllEnemies();
 
   snapCameraToPlayer();
 

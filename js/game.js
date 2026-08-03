@@ -53,9 +53,6 @@ function render() {
     VIEW_HEIGHT
   );
 
-  /*
-    地牢背景。
-  */
   drawBackground();
 
   drawDungeonWalls();
@@ -66,25 +63,20 @@ function render() {
 
   if (assetsLoaded) {
     /*
-      全部敵人的陰影、角色與血條，
-      由 drawEnemies() 統一繪製。
+      繪製全部敵人：
+      - 陰影
+      - 角色
+      - 血條
     */
     drawEnemies();
 
-    /*
-      玩家陰影。
-    */
     drawPlayerShadow();
 
-    /*
-      玩家角色。
-    */
     drawPlayer();
   }
 
   /*
-    傷害數字位於角色上方，
-    但位於固定 HUD 下方。
+    傷害數字繪製在角色上方。
   */
   drawDamageNumbers();
 
@@ -104,41 +96,39 @@ function updateGame(
   deltaTime
 ) {
   /*
-    1. 更新玩家狀態與動畫。
+    更新玩家。
   */
   updatePlayer(
     deltaTime
   );
 
   /*
-    2. 更新全部敵人。
+    更新全部敵人。
 
-    每隻敵人會獨立處理：
-    - 巡邏
-    - 追蹤
-    - 攻擊
-    - 死亡淡出
-    - 重生倒數
+    不再使用舊版：
+    updateOrc(deltaTime)
   */
   updateEnemies(
     deltaTime
   );
 
   /*
-    3. 處理玩家與全部敵人的戰鬥。
+    處理玩家與全部敵人的戰鬥。
   */
   resolveCombat();
 
   /*
-    4. 更新傷害數字的位置、
-    Fade In 與 Fade Out 時間。
+    更新傷害數字：
+    - 上升
+    - Fade In
+    - Fade Out
   */
   updateDamageNumbers(
     deltaTime
   );
 
   /*
-    5. 遊戲開始後更新相機。
+    遊戲開始後更新相機。
   */
   if (gameStarted) {
     updateCamera(
@@ -162,15 +152,9 @@ function gameLoop(
     1000;
 
   /*
-    限制單幀最大時間。
-
-    避免：
-    - 切換瀏覽器分頁
-    - 手機暫時卡頓
-    - 視窗進入背景
-
-    回到遊戲後角色或敵人
-    一次移動過遠。
+    限制單幀最大時間，
+    避免切換分頁或手機卡頓後，
+    玩家及敵人一次移動過遠。
   */
   const deltaTime =
     Math.min(
@@ -198,14 +182,12 @@ function gameLoop(
 
 function initializeGameEnemies() {
   /*
-    根據 config.js 的
-    ENEMY_SPAWN_CONFIGS 建立：
+    依照 config.js 內的
+    ENEMY_SPAWN_CONFIGS 建立敵人。
 
+    目前包括：
     - ORC1
     - ORC2
-
-    敵人只在遊戲初始化時建立一次。
-    死亡後由各自的重生計時器重生。
   */
   initializeEnemies();
 }
@@ -216,12 +198,12 @@ function initializeGameEnemies() {
 
 function initializeGame() {
   /*
-    建立全部敵人。
+    只在遊戲啟動時建立一次敵人。
   */
   initializeGameEnemies();
 
   /*
-    主遊戲循環只能啟動一次。
+    主循環只能啟動一次。
   */
   if (!gameLoopStarted) {
     gameLoopStarted =
@@ -236,13 +218,12 @@ function initializeGame() {
   }
 
   /*
-    手機直向開啟時，
-    先顯示旋轉提示。
+    手機直向時先顯示旋轉提示。
 
-    手機轉成橫向後，
-    resize 或 orientationchange
-    會呼叫 handleOrientationState()，
-    再開始 Loading。
+    轉為橫向後，
+    input.js 會透過 resize 或
+    orientationchange 呼叫
+    handleOrientationState()。
   */
   if (
     isTouchDevice() &&

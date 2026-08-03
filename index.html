@@ -11,10 +11,6 @@
   <title>Hooded Escape</title>
 
   <style>
-    /* ==================================================
-       基礎設定
-    ================================================== */
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -261,7 +257,6 @@
 
     #loading-page.prepared {
       visibility: visible;
-      pointer-events: none;
     }
 
     #loading-page.visible {
@@ -398,7 +393,6 @@
       width: 100%;
 
       opacity: 1;
-
       transform: translateY(0);
 
       transition:
@@ -408,9 +402,7 @@
 
     #loading-status.hidden {
       opacity: 0;
-
       transform: translateY(-10px);
-
       pointer-events: none;
     }
 
@@ -545,8 +537,7 @@
       transition:
         opacity 0.65s ease,
         transform 0.65s ease,
-        border-color 0.2s ease,
-        background 0.2s ease;
+        border-color 0.2s ease;
     }
 
     #enter-dungeon-button.visible {
@@ -557,14 +548,7 @@
     }
 
     #enter-dungeon-button:hover {
-      border-color: rgba(255, 255, 255, 0.78);
-
-      background:
-        linear-gradient(
-          180deg,
-          rgba(123, 140, 173, 0.98),
-          rgba(59, 70, 95, 1)
-        );
+      border-color: rgba(255, 255, 255, 0.8);
     }
 
     #enter-dungeon-button:active {
@@ -592,16 +576,14 @@
       color: rgba(255, 255, 255, 0.9);
 
       font-size: 15px;
-
       white-space: nowrap;
 
       opacity: 0;
       visibility: hidden;
 
-      transition:
-        opacity 0.4s ease;
-
       pointer-events: none;
+
+      transition: opacity 0.4s ease;
     }
 
     #keyboard-settings {
@@ -628,8 +610,7 @@
       opacity: 0;
       visibility: hidden;
 
-      transition:
-        opacity 0.4s ease;
+      transition: opacity 0.4s ease;
     }
 
     #attack-key-select {
@@ -642,8 +623,6 @@
 
       background: #1a202b;
       color: #ffffff;
-
-      cursor: pointer;
     }
 
     body.game-started #desktop-help,
@@ -664,10 +643,10 @@
       opacity: 0;
       visibility: hidden;
 
+      pointer-events: none;
+
       transition:
         opacity 0.4s ease;
-
-      pointer-events: none;
     }
 
     body.game-started #touch-controls {
@@ -675,7 +654,6 @@
       visibility: visible;
     }
 
-    /* 虛擬搖桿縮小 */
     #joystick-zone {
       position: absolute;
 
@@ -690,7 +668,6 @@
       justify-content: center;
 
       pointer-events: auto;
-
       touch-action: none;
     }
 
@@ -822,10 +799,6 @@
       margin-bottom: clamp(32px, 4vw, 54px);
     }
 
-    /* ==================================================
-       裝置判斷
-    ================================================== */
-
     @media (hover: hover) and (pointer: fine) {
       #touch-controls {
         display: none;
@@ -866,7 +839,6 @@
       tabindex="0"
     ></canvas>
 
-    <!-- 手機直向提示 -->
     <section
       id="orientation-screen"
       aria-label="請旋轉手機"
@@ -889,7 +861,6 @@
       </div>
     </section>
 
-    <!-- Loading Page -->
     <section
       id="loading-page"
       aria-label="遊戲載入畫面"
@@ -930,13 +901,11 @@
       </div>
     </section>
 
-    <!-- 電腦版操作提示 -->
     <div id="desktop-help">
-      方向鍵移動｜↑ 跳躍｜↓ 蹲下｜Shift 跑步｜攻擊：
+      A／D 或方向鍵移動｜W／空白鍵跳躍｜S 蹲下｜Shift 跑步｜攻擊：
       <span id="attack-key-label">Z</span>
     </div>
 
-    <!-- 電腦版攻擊鍵設定 -->
     <div id="keyboard-settings">
       <label for="attack-key-select">
         攻擊鍵
@@ -953,7 +922,6 @@
       </select>
     </div>
 
-    <!-- 手機版操作 -->
     <div id="touch-controls">
       <div id="joystick-zone">
         <div id="joystick-base">
@@ -963,11 +931,9 @@
 
       <div id="action-controls">
         <button
-          id="attack-button"
           class="action-button"
           type="button"
           data-control="attack"
-          aria-label="攻擊"
         >
           攻
         </button>
@@ -977,7 +943,6 @@
           class="action-button"
           type="button"
           data-control="jump"
-          aria-label="跳躍"
         >
           跳
         </button>
@@ -1037,27 +1002,29 @@
     context.imageSmoothingEnabled = false;
 
     /* ==================================================
-       遊戲常數
+       畫面與世界設定
     ================================================== */
 
-    const GAME_WIDTH = 1280;
-    const GAME_HEIGHT = 720;
+    const VIEW_WIDTH = 1280;
+    const VIEW_HEIGHT = 720;
 
-    const GROUND_Y = 615;
+    const WORLD_WIDTH = 2560;
+    const WORLD_HEIGHT = 1440;
+
+    const WORLD_GROUND_Y = 1240;
 
     const GRAVITY = 2200;
     const WALK_SPEED = 230;
     const RUN_SPEED = 420;
     const JUMP_FORCE = 820;
 
-    /*
-      角色由 2.2 提高至 2.6。
-    */
     const PLAYER_SCALE = 2.6;
 
     const JOYSTICK_DEAD_ZONE = 0.14;
     const RUN_THRESHOLD = 0.72;
     const DUCK_THRESHOLD = 0.62;
+
+    const CAMERA_FOLLOW_SPEED = 5.5;
 
     const ORIENTATION_FADE_TIME = 650;
 
@@ -1078,98 +1045,73 @@
       performance.now();
 
     /* ==================================================
-       裝置工具
+       相機
     ================================================== */
 
-    function isTouchDevice() {
-      return (
-        window.matchMedia(
-          "(pointer: coarse)"
-        ).matches ||
-        window.matchMedia(
-          "(hover: none)"
-        ).matches
-      );
-    }
+    const camera = {
+      x: 0,
+      y: 0,
 
-    function isPortrait() {
-      return (
-        window.innerHeight >
-        window.innerWidth
-      );
-    }
-
-    function wait(milliseconds) {
-      return new Promise((resolve) => {
-        window.setTimeout(
-          resolve,
-          milliseconds
-        );
-      });
-    }
-
-    function waitForNextPaint() {
-      return new Promise((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(resolve);
-        });
-      });
-    }
-
-    /* ==================================================
-       攻擊鍵設定
-    ================================================== */
-
-    const ATTACK_KEY_STORAGE =
-      "hoodedCharacterAttackKey";
-
-    const allowedAttackKeys = {
-      KeyZ: "Z",
-      KeyX: "X",
-      KeyC: "C",
-      KeyV: "V",
-      KeyJ: "J",
-      KeyK: "K",
-      KeyL: "L"
+      targetX: 0,
+      targetY: 0
     };
 
-    let attackKeyCode =
-      localStorage.getItem(
-        ATTACK_KEY_STORAGE
-      ) || "KeyZ";
+    /* ==================================================
+       玩家
+    ================================================== */
 
-    if (!allowedAttackKeys[attackKeyCode]) {
-      attackKeyCode = "KeyZ";
-    }
+    const player = {
+      x: 340,
+      y: WORLD_GROUND_Y,
 
-    attackKeySelect.value =
-      attackKeyCode;
+      velocityX: 0,
+      velocityY: 0,
 
-    attackKeyLabel.textContent =
-      allowedAttackKeys[attackKeyCode];
+      facing: 1,
 
-    attackKeySelect.addEventListener(
-      "change",
-      () => {
-        attackKeyCode =
-          attackKeySelect.value;
+      grounded: true,
+      ducking: false,
+      attacking: false,
 
-        localStorage.setItem(
-          ATTACK_KEY_STORAGE,
-          attackKeyCode
-        );
+      animation: "idle",
 
-        attackKeyLabel.textContent =
-          allowedAttackKeys[attackKeyCode];
-
-        resetAllInputs();
-
-        canvas.focus();
-      }
-    );
+      frameIndex: 0,
+      frameTimer: 0
+    };
 
     /* ==================================================
-       動畫素材設定
+       輸入
+    ================================================== */
+
+    const input = {
+      left: false,
+      right: false,
+      run: false,
+      duck: false,
+      jump: false,
+      attack: false
+    };
+
+    const pressed = {
+      jump: false,
+      attack: false
+    };
+
+    const joystick = {
+      active: false,
+      pointerId: null,
+
+      centerX: 0,
+      centerY: 0,
+      radius: 0,
+
+      x: 0,
+      y: 0,
+      magnitude: 0
+    };
+
+    /* ==================================================
+       動畫設定
     ================================================== */
 
     const animationDefinitions = {
@@ -1225,73 +1167,99 @@
     const animations = {};
 
     /* ==================================================
-       輸入狀態
+       工具函式
     ================================================== */
 
-    const input = {
-      left: false,
-      right: false,
-      run: false,
-      duck: false,
-      jump: false,
-      attack: false
-    };
+    function clamp(value, minimum, maximum) {
+      return Math.max(
+        minimum,
+        Math.min(maximum, value)
+      );
+    }
 
-    const pressed = {
-      jump: false,
-      attack: false
-    };
+    function wait(milliseconds) {
+      return new Promise((resolve) => {
+        window.setTimeout(resolve, milliseconds);
+      });
+    }
 
-    const joystick = {
-      active: false,
-      pointerId: null,
+    function waitForNextPaint() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve);
+        });
+      });
+    }
 
-      centerX: 0,
-      centerY: 0,
+    function isTouchDevice() {
+      return (
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.matchMedia("(hover: none)").matches
+      );
+    }
 
-      radius: 0,
-
-      x: 0,
-      y: 0,
-
-      magnitude: 0
-    };
+    function isPortrait() {
+      return window.innerHeight > window.innerWidth;
+    }
 
     /* ==================================================
-       玩家
+       攻擊鍵
     ================================================== */
 
-    const player = {
-      x: 200,
-      y: GROUND_Y,
+    const ATTACK_KEY_STORAGE =
+      "hoodedCharacterAttackKey";
 
-      velocityX: 0,
-      velocityY: 0,
-
-      width: 120,
-      height: 120,
-
-      facing: 1,
-
-      grounded: true,
-      ducking: false,
-      attacking: false,
-
-      animation: "idle",
-
-      frameIndex: 0,
-      frameTimer: 0
+    const allowedAttackKeys = {
+      KeyZ: "Z",
+      KeyX: "X",
+      KeyC: "C",
+      KeyV: "V",
+      KeyJ: "J",
+      KeyK: "K",
+      KeyL: "L"
     };
+
+    let attackKeyCode =
+      localStorage.getItem(
+        ATTACK_KEY_STORAGE
+      ) || "KeyZ";
+
+    if (!allowedAttackKeys[attackKeyCode]) {
+      attackKeyCode = "KeyZ";
+    }
+
+    attackKeySelect.value =
+      attackKeyCode;
+
+    attackKeyLabel.textContent =
+      allowedAttackKeys[attackKeyCode];
+
+    attackKeySelect.addEventListener(
+      "change",
+      () => {
+        attackKeyCode =
+          attackKeySelect.value;
+
+        localStorage.setItem(
+          ATTACK_KEY_STORAGE,
+          attackKeyCode
+        );
+
+        attackKeyLabel.textContent =
+          allowedAttackKeys[attackKeyCode];
+
+        resetAllInputs();
+
+        canvas.focus();
+      }
+    );
 
     /* ==================================================
        圖片載入
     ================================================== */
 
     function padNumber(number) {
-      return String(number).padStart(
-        2,
-        "0"
-      );
+      return String(number).padStart(2, "0");
     }
 
     function createFramePath(
@@ -1331,7 +1299,7 @@
     }
 
     async function loadAnimations() {
-      const loadingTasks = [];
+      const tasks = [];
 
       for (
         const [
@@ -1343,18 +1311,15 @@
       ) {
         animations[animationName] = {
           frames: [],
-
           frameDuration:
             definition.frameDuration,
-
           loop:
             definition.loop
         };
 
         for (
           let frameNumber = 1;
-          frameNumber <=
-            definition.frameCount;
+          frameNumber <= definition.frameCount;
           frameNumber += 1
         ) {
           const path =
@@ -1363,7 +1328,7 @@
               frameNumber
             );
 
-          loadingTasks.push(
+          tasks.push(
             loadImage(path).then(
               (image) => {
                 animations[
@@ -1377,13 +1342,11 @@
         }
       }
 
-      await Promise.all(
-        loadingTasks
-      );
+      await Promise.all(tasks);
     }
 
     /* ==================================================
-       假讀取
+       Loading
     ================================================== */
 
     function setLoadingProgress(
@@ -1391,10 +1354,7 @@
       message
     ) {
       const safeProgress =
-        Math.max(
-          0,
-          Math.min(100, progress)
-        );
+        clamp(progress, 0, 100);
 
       progressBar.style.width =
         `${safeProgress}%`;
@@ -1437,9 +1397,7 @@
 
           const progress =
             start +
-            (
-              end - start
-            ) *
+            (end - start) *
             easedRatio;
 
           setLoadingProgress(
@@ -1448,17 +1406,13 @@
           );
 
           if (ratio < 1) {
-            requestAnimationFrame(
-              update
-            );
+            requestAnimationFrame(update);
           } else {
             resolve();
           }
         }
 
-        requestAnimationFrame(
-          update
-        );
+        requestAnimationFrame(update);
       });
     }
 
@@ -1490,7 +1444,7 @@
         70,
         90,
         1150,
-        "正在解除入口封印……"
+        "正在載入地下城區域……"
       );
 
       setLoadingProgress(
@@ -1504,7 +1458,7 @@
         90,
         100,
         850,
-        "正在開啟地下城入口……"
+        "正在建立冒險視野……"
       );
 
       setLoadingProgress(
@@ -1581,7 +1535,7 @@
     }
 
     /* ==================================================
-       直向與橫向轉場
+       直向提示
     ================================================== */
 
     function showOrientationScreen() {
@@ -1606,19 +1560,12 @@
 
       orientationTransitioning = true;
 
-      /*
-        先在提示畫面下方準備 Loading Page。
-      */
       loadingPage.classList.add(
         "prepared"
       );
 
       await waitForNextPaint();
 
-      /*
-        Loading Page 淡入，
-        提示畫面同步淡出。
-      */
       loadingPage.classList.add(
         "visible"
       );
@@ -1682,6 +1629,12 @@
 
       resetAllInputs();
 
+      /*
+        進入遊戲前，讓相機直接對準玩家，
+        避免開始時從地圖左上角滑過來。
+      */
+      snapCameraToPlayer();
+
       loadingPage.classList.add(
         "game-entered"
       );
@@ -1703,7 +1656,7 @@
     );
 
     /* ==================================================
-       動畫控制
+       玩家動畫
     ================================================== */
 
     function setAnimation(
@@ -1715,8 +1668,7 @@
       }
 
       if (
-        player.animation !==
-          animationName ||
+        player.animation !== animationName ||
         restart
       ) {
         player.animation =
@@ -1801,8 +1753,7 @@
               animation.frames.length - 1;
 
             if (
-              player.animation ===
-              "attack"
+              player.animation === "attack"
             ) {
               player.attacking = false;
 
@@ -1861,54 +1812,10 @@
       );
     }
 
-    function choosePlayerAnimation(
-      horizontalDirection,
-      analogStrength
-    ) {
-      if (player.attacking) {
-        setAnimation("attack");
-        return;
-      }
-
-      if (!player.grounded) {
-        setAnimation("jump");
-        return;
-      }
-
-      if (player.ducking) {
-        setAnimation("duck");
-        return;
-      }
-
-      if (
-        Math.abs(
-          horizontalDirection
-        ) >
-        JOYSTICK_DEAD_ZONE
-      ) {
-        const shouldRun =
-          input.run ||
-          analogStrength >=
-            RUN_THRESHOLD;
-
-        setAnimation(
-          shouldRun
-            ? "run"
-            : "walk"
-        );
-
-        return;
-      }
-
-      setAnimation("idle");
-    }
-
     function updatePlayer(deltaTime) {
       if (!gameStarted) {
         if (assetsLoaded) {
-          updateAnimation(
-            deltaTime
-          );
+          updateAnimation(deltaTime);
         }
 
         return;
@@ -1916,13 +1823,11 @@
 
       if (pressed.jump) {
         triggerJump();
-
         pressed.jump = false;
       }
 
       if (pressed.attack) {
         triggerAttack();
-
         pressed.attack = false;
       }
 
@@ -1945,8 +1850,7 @@
 
       const joystickDucking =
         joystick.active &&
-        joystick.y >
-          DUCK_THRESHOLD &&
+        joystick.y > DUCK_THRESHOLD &&
         Math.abs(joystick.x) < 0.55;
 
       player.ducking =
@@ -1962,9 +1866,7 @@
         !player.ducking
       ) {
         if (
-          Math.abs(
-            horizontalDirection
-          ) >
+          Math.abs(horizontalDirection) >
           JOYSTICK_DEAD_ZONE
         ) {
           const shouldRun =
@@ -1972,32 +1874,44 @@
             analogStrength >=
               RUN_THRESHOLD;
 
-          const speed =
+          const movementSpeed =
             shouldRun
               ? RUN_SPEED
               : WALK_SPEED;
 
           player.velocityX =
             horizontalDirection *
-            speed;
+            movementSpeed;
 
           player.facing =
             horizontalDirection > 0
               ? 1
               : -1;
-        } else {
-          horizontalDirection = 0;
 
+          setAnimation(
+            shouldRun
+              ? "run"
+              : "walk"
+          );
+        } else {
           player.velocityX = 0;
+
+          setAnimation("idle");
         }
       } else {
         player.velocityX = 0;
+
+        if (player.ducking) {
+          setAnimation("duck");
+        }
       }
 
       if (!player.grounded) {
         player.velocityY +=
           GRAVITY *
           deltaTime;
+
+        setAnimation("jump");
       }
 
       player.x +=
@@ -2009,41 +1923,145 @@
         deltaTime;
 
       /*
-        放大角色後增加少量邊界，
-        避免角色太靠近畫面兩側。
+        玩家使用世界座標，
+        邊界是 0～2560，而不是 0～1280。
       */
-      const boundary =
-        52;
-
-      player.x = Math.max(
-        boundary,
-        Math.min(
-          GAME_WIDTH - boundary,
-          player.x
-        )
+      player.x = clamp(
+        player.x,
+        52,
+        WORLD_WIDTH - 52
       );
 
-      if (player.y >= GROUND_Y) {
-        player.y = GROUND_Y;
+      if (
+        player.y >=
+        WORLD_GROUND_Y
+      ) {
+        player.y =
+          WORLD_GROUND_Y;
 
         player.velocityY = 0;
-
         player.grounded = true;
       }
 
-      choosePlayerAnimation(
-        horizontalDirection,
-        analogStrength
+      /*
+        避免玩家跳出世界上方。
+      */
+      if (player.y < 100) {
+        player.y = 100;
+        player.velocityY = 0;
+      }
+
+      updateAnimation(deltaTime);
+    }
+
+    /* ==================================================
+       相機跟隨
+    ================================================== */
+
+    function calculateCameraTarget() {
+      /*
+        水平位置讓玩家稍微偏左，
+        可看到更多前進方向。
+
+        VIEW_WIDTH * 0.42 約為 538，
+        玩家不會完全固定在正中央。
+      */
+      const horizontalAnchor =
+        VIEW_WIDTH * 0.42;
+
+      const verticalAnchor =
+        VIEW_HEIGHT * 0.58;
+
+      camera.targetX =
+        player.x -
+        horizontalAnchor;
+
+      camera.targetY =
+        player.y -
+        verticalAnchor;
+
+      /*
+        限制相機不可超出世界範圍。
+      */
+      camera.targetX = clamp(
+        camera.targetX,
+        0,
+        WORLD_WIDTH -
+          VIEW_WIDTH
       );
 
-      updateAnimation(
-        deltaTime
+      camera.targetY = clamp(
+        camera.targetY,
+        0,
+        WORLD_HEIGHT -
+          VIEW_HEIGHT
+      );
+    }
+
+    function snapCameraToPlayer() {
+      calculateCameraTarget();
+
+      camera.x =
+        camera.targetX;
+
+      camera.y =
+        camera.targetY;
+    }
+
+    function updateCamera(deltaTime) {
+      calculateCameraTarget();
+
+      /*
+        以指數平滑方式跟隨，
+        不會因不同 FPS 產生太大差異。
+      */
+      const smoothing =
+        1 -
+        Math.exp(
+          -CAMERA_FOLLOW_SPEED *
+          deltaTime
+        );
+
+      camera.x +=
+        (
+          camera.targetX -
+          camera.x
+        ) *
+        smoothing;
+
+      camera.y +=
+        (
+          camera.targetY -
+          camera.y
+        ) *
+        smoothing;
+
+      camera.x = clamp(
+        camera.x,
+        0,
+        WORLD_WIDTH -
+          VIEW_WIDTH
+      );
+
+      camera.y = clamp(
+        camera.y,
+        0,
+        WORLD_HEIGHT -
+          VIEW_HEIGHT
       );
     }
 
     /* ==================================================
-       Canvas 繪製
+       世界繪製
     ================================================== */
+
+    function worldToScreenX(worldX) {
+      return worldX - camera.x;
+    }
+
+    function worldToScreenY(worldY) {
+      return worldY - camera.y;
+    }
 
     function drawBackground() {
       const gradient =
@@ -2051,7 +2069,7 @@
           0,
           0,
           0,
-          GAME_HEIGHT
+          VIEW_HEIGHT
         );
 
       gradient.addColorStop(
@@ -2070,19 +2088,346 @@
       context.fillRect(
         0,
         0,
-        GAME_WIDTH,
-        GAME_HEIGHT
+        VIEW_WIDTH,
+        VIEW_HEIGHT
       );
+    }
+
+    function drawParallaxBackground() {
+      /*
+        遠景移動速度比相機慢，
+        製造些微景深效果。
+      */
+      const farOffsetX =
+        camera.x * 0.18;
+
+      const farOffsetY =
+        camera.y * 0.08;
+
+      context.save();
+
+      context.fillStyle =
+        "rgba(121, 137, 166, 0.08)";
+
+      for (
+        let x = -300;
+        x < VIEW_WIDTH + 500;
+        x += 420
+      ) {
+        const drawX =
+          x -
+          (
+            farOffsetX %
+            420
+          );
+
+        context.beginPath();
+
+        context.moveTo(
+          drawX,
+          VIEW_HEIGHT -
+            140 -
+            farOffsetY
+        );
+
+        context.lineTo(
+          drawX + 180,
+          VIEW_HEIGHT -
+            420 -
+            farOffsetY
+        );
+
+        context.lineTo(
+          drawX + 370,
+          VIEW_HEIGHT -
+            140 -
+            farOffsetY
+        );
+
+        context.closePath();
+        context.fill();
+      }
+
+      context.restore();
+    }
+
+    function drawDungeonWalls() {
+      const tileSize = 96;
+
+      const startColumn =
+        Math.floor(
+          camera.x /
+          tileSize
+        );
+
+      const endColumn =
+        Math.ceil(
+          (
+            camera.x +
+            VIEW_WIDTH
+          ) /
+          tileSize
+        );
+
+      const startRow =
+        Math.floor(
+          camera.y /
+          tileSize
+        );
+
+      const endRow =
+        Math.ceil(
+          (
+            camera.y +
+            VIEW_HEIGHT
+          ) /
+          tileSize
+        );
+
+      for (
+        let row = startRow;
+        row <= endRow;
+        row += 1
+      ) {
+        for (
+          let column = startColumn;
+          column <= endColumn;
+          column += 1
+        ) {
+          const worldX =
+            column *
+            tileSize;
+
+          const worldY =
+            row *
+            tileSize;
+
+          const screenX =
+            worldToScreenX(worldX);
+
+          const screenY =
+            worldToScreenY(worldY);
+
+          const alternate =
+            (
+              row +
+              column
+            ) %
+              2 ===
+            0;
+
+          context.fillStyle =
+            alternate
+              ? "rgba(255,255,255,0.018)"
+              : "rgba(0,0,0,0.025)";
+
+          context.fillRect(
+            Math.floor(screenX),
+            Math.floor(screenY),
+            tileSize,
+            tileSize
+          );
+
+          context.strokeStyle =
+            "rgba(255,255,255,0.025)";
+
+          context.strokeRect(
+            Math.floor(screenX),
+            Math.floor(screenY),
+            tileSize,
+            tileSize
+          );
+        }
+      }
+    }
+
+    function drawDungeonDecorations() {
+      const pillars = [
+        { x: 760, y: 930 },
+        { x: 1200, y: 930 },
+        { x: 1660, y: 930 },
+        { x: 2140, y: 930 }
+      ];
+
+      for (
+        const pillar of pillars
+      ) {
+        const screenX =
+          worldToScreenX(
+            pillar.x
+          );
+
+        const screenY =
+          worldToScreenY(
+            pillar.y
+          );
+
+        /*
+          畫面外的物件不必繪製。
+        */
+        if (
+          screenX < -160 ||
+          screenX > VIEW_WIDTH + 160
+        ) {
+          continue;
+        }
+
+        context.fillStyle =
+          "#202937";
+
+        context.fillRect(
+          screenX - 42,
+          screenY,
+          84,
+          310
+        );
+
+        context.fillStyle =
+          "#303b4c";
+
+        context.fillRect(
+          screenX - 55,
+          screenY,
+          110,
+          24
+        );
+
+        context.fillRect(
+          screenX - 55,
+          screenY + 286,
+          110,
+          24
+        );
+
+        context.fillStyle =
+          "rgba(255,255,255,0.045)";
+
+        context.fillRect(
+          screenX - 26,
+          screenY + 34,
+          12,
+          235
+        );
+      }
+
+      const torches = [
+        { x: 520, y: 1040 },
+        { x: 980, y: 1040 },
+        { x: 1440, y: 1040 },
+        { x: 1900, y: 1040 },
+        { x: 2340, y: 1040 }
+      ];
+
+      for (
+        const torch of torches
+      ) {
+        const screenX =
+          worldToScreenX(
+            torch.x
+          );
+
+        const screenY =
+          worldToScreenY(
+            torch.y
+          );
+
+        if (
+          screenX < -80 ||
+          screenX > VIEW_WIDTH + 80
+        ) {
+          continue;
+        }
+
+        context.fillStyle =
+          "#4a3328";
+
+        context.fillRect(
+          screenX - 5,
+          screenY,
+          10,
+          56
+        );
+
+        const glow =
+          context.createRadialGradient(
+            screenX,
+            screenY,
+            2,
+            screenX,
+            screenY,
+            90
+          );
+
+        glow.addColorStop(
+          0,
+          "rgba(227,121,61,0.42)"
+        );
+
+        glow.addColorStop(
+          1,
+          "rgba(227,121,61,0)"
+        );
+
+        context.fillStyle =
+          glow;
+
+        context.beginPath();
+
+        context.arc(
+          screenX,
+          screenY,
+          90,
+          0,
+          Math.PI * 2
+        );
+
+        context.fill();
+
+        context.fillStyle =
+          "#d96e3d";
+
+        context.beginPath();
+
+        context.moveTo(
+          screenX,
+          screenY - 30
+        );
+
+        context.lineTo(
+          screenX - 12,
+          screenY
+        );
+
+        context.lineTo(
+          screenX,
+          screenY + 7
+        );
+
+        context.lineTo(
+          screenX + 12,
+          screenY
+        );
+
+        context.closePath();
+        context.fill();
+      }
+    }
+
+    function drawGround() {
+      const screenGroundY =
+        worldToScreenY(
+          WORLD_GROUND_Y
+        );
 
       context.fillStyle =
         "#303846";
 
       context.fillRect(
         0,
-        GROUND_Y,
-        GAME_WIDTH,
-        GAME_HEIGHT -
-          GROUND_Y
+        screenGroundY,
+        VIEW_WIDTH,
+        WORLD_HEIGHT -
+          WORLD_GROUND_Y
       );
 
       context.fillStyle =
@@ -2090,29 +2435,92 @@
 
       context.fillRect(
         0,
-        GROUND_Y,
-        GAME_WIDTH,
+        screenGroundY,
+        VIEW_WIDTH,
         5
       );
 
+      const floorTileWidth = 84;
+
+      const firstTile =
+        Math.floor(
+          camera.x /
+          floorTileWidth
+        );
+
+      const lastTile =
+        Math.ceil(
+          (
+            camera.x +
+            VIEW_WIDTH
+          ) /
+          floorTileWidth
+        );
+
       context.fillStyle =
-        "rgba(255, 255, 255, 0.06)";
+        "rgba(255,255,255,0.06)";
 
       for (
-        let x = 0;
-        x < GAME_WIDTH;
-        x += 84
+        let tile = firstTile;
+        tile <= lastTile;
+        tile += 1
       ) {
+        const worldX =
+          tile *
+          floorTileWidth;
+
+        const screenX =
+          worldToScreenX(
+            worldX
+          );
+
         context.fillRect(
-          x,
-          GROUND_Y + 38,
+          screenX,
+          screenGroundY + 38,
           48,
           4
         );
       }
     }
 
+    function drawWorldBoundaryMarkers() {
+      const leftX =
+        worldToScreenX(0);
+
+      const rightX =
+        worldToScreenX(
+          WORLD_WIDTH
+        );
+
+      context.fillStyle =
+        "rgba(113,130,159,0.28)";
+
+      context.fillRect(
+        leftX,
+        0,
+        8,
+        VIEW_HEIGHT
+      );
+
+      context.fillRect(
+        rightX - 8,
+        0,
+        8,
+        VIEW_HEIGHT
+      );
+    }
+
     function drawPlayerShadow() {
+      const screenX =
+        worldToScreenX(
+          player.x
+        );
+
+      const screenY =
+        worldToScreenY(
+          WORLD_GROUND_Y
+        );
+
       context.save();
 
       context.globalAlpha =
@@ -2124,8 +2532,8 @@
       context.beginPath();
 
       context.ellipse(
-        player.x,
-        GROUND_Y + 5,
+        screenX,
+        screenY + 5,
         50,
         12,
         0,
@@ -2169,11 +2577,21 @@
         frame.height *
         PLAYER_SCALE;
 
+      const screenX =
+        worldToScreenX(
+          player.x
+        );
+
+      const screenY =
+        worldToScreenY(
+          player.y
+        );
+
       context.save();
 
       context.translate(
-        Math.round(player.x),
-        Math.round(player.y)
+        Math.round(screenX),
+        Math.round(screenY)
       );
 
       context.scale(
@@ -2183,19 +2601,15 @@
 
       context.drawImage(
         frame,
-
         Math.round(
           -drawWidth / 2
         ),
-
         Math.round(
           -drawHeight
         ),
-
         Math.round(
           drawWidth
         ),
-
         Math.round(
           drawHeight
         )
@@ -2204,56 +2618,51 @@
       context.restore();
     }
 
-    function drawStatus() {
+    function drawDebugHud() {
       if (!gameStarted) {
         return;
       }
 
-      const animationNames = {
-        idle: "待機",
-        walk: "行走",
-        run: "跑步",
-        duck: "蹲下",
-        jump: "跳躍",
-        attack: "攻擊"
-      };
-
       context.save();
 
       context.fillStyle =
-        "rgba(0, 0, 0, 0.35)";
+        "rgba(0,0,0,0.48)";
 
       context.fillRect(
         24,
         24,
-        210,
-        72
+        272,
+        116
       );
 
       context.fillStyle =
         "#ffffff";
 
       context.font =
-        "22px Arial, Microsoft JhengHei";
-
-      context.fillText(
-        `動畫：${animationNames[player.animation]}`,
-        42,
-        57
-      );
-
-      context.fillStyle =
-        "rgba(255, 255, 255, 0.72)";
-
-      context.font =
         "18px Arial, Microsoft JhengHei";
 
       context.fillText(
-        player.grounded
-          ? "狀態：地面"
-          : "狀態：空中",
+        `世界：${WORLD_WIDTH} × ${WORLD_HEIGHT}`,
         42,
-        84
+        53
+      );
+
+      context.fillText(
+        `玩家：${Math.round(player.x)}, ${Math.round(player.y)}`,
+        42,
+        79
+      );
+
+      context.fillText(
+        `相機：${Math.round(camera.x)}, ${Math.round(camera.y)}`,
+        42,
+        105
+      );
+
+      context.fillText(
+        `視窗：${VIEW_WIDTH} × ${VIEW_HEIGHT}`,
+        42,
+        131
       );
 
       context.restore();
@@ -2263,18 +2672,23 @@
       context.clearRect(
         0,
         0,
-        GAME_WIDTH,
-        GAME_HEIGHT
+        VIEW_WIDTH,
+        VIEW_HEIGHT
       );
 
       drawBackground();
+      drawParallaxBackground();
+      drawDungeonWalls();
+      drawDungeonDecorations();
+      drawGround();
+      drawWorldBoundaryMarkers();
 
       if (assetsLoaded) {
         drawPlayerShadow();
         drawPlayer();
       }
 
-      drawStatus();
+      drawDebugHud();
     }
 
     /* ==================================================
@@ -2304,10 +2718,7 @@
         ShiftRight: "run"
       };
 
-      return (
-        keyBindings[code] ||
-        null
-      );
+      return keyBindings[code] || null;
     }
 
     function setControl(
@@ -2315,9 +2726,7 @@
       active,
       isNewPress = false
     ) {
-      if (
-        !(controlName in input)
-      ) {
+      if (!(controlName in input)) {
         return;
       }
 
@@ -2329,14 +2738,11 @@
           controlName === "attack"
         )
       ) {
-        pressed[
-          controlName
-        ] = true;
+        pressed[controlName] = true;
       }
 
-      input[
-        controlName
-      ] = active;
+      input[controlName] =
+        active;
     }
 
     window.addEventListener(
@@ -2494,7 +2900,6 @@
 
       joystick.x = 0;
       joystick.y = 0;
-
       joystick.magnitude = 0;
 
       joystickStick.style.transform =
@@ -2517,7 +2922,6 @@
         updateJoystickCenter();
 
         joystick.active = true;
-
         joystick.pointerId =
           event.pointerId;
 
@@ -2563,18 +2967,7 @@
 
     joystickZone.addEventListener(
       "pointerup",
-      (event) => {
-        if (
-          event.pointerId !==
-          joystick.pointerId
-        ) {
-          return;
-        }
-
-        event.preventDefault();
-
-        resetJoystick();
-      }
+      resetJoystick
     );
 
     joystickZone.addEventListener(
@@ -2667,7 +3060,7 @@
       });
 
     /* ==================================================
-       輸入重置
+       重置輸入
     ================================================== */
 
     function resetAllInputs() {
@@ -2675,9 +3068,7 @@
         const controlName of
         Object.keys(input)
       ) {
-        input[
-          controlName
-        ] = false;
+        input[controlName] = false;
       }
 
       pressed.jump = false;
@@ -2728,7 +3119,6 @@
 
         window.setTimeout(() => {
           handleOrientationState();
-
           updateJoystickCenter();
         }, 250);
       }
@@ -2743,7 +3133,8 @@
         (
           currentTime -
           previousTime
-        ) / 1000;
+        ) /
+        1000;
 
       const deltaTime =
         Math.min(
@@ -2754,9 +3145,11 @@
       previousTime =
         currentTime;
 
-      updatePlayer(
-        deltaTime
-      );
+      updatePlayer(deltaTime);
+
+      if (gameStarted) {
+        updateCamera(deltaTime);
+      }
 
       render();
 

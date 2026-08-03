@@ -1,9 +1,14 @@
 "use strict";
 
-/* Hurtbox、Hitbox、傷害、無敵與碰撞擊退 */
+/*
+  Hooded Escape
+
+  玩家與多隻敵人的 Hurtbox、Hitbox、
+  傷害、接觸碰撞及死亡判定。
+*/
 
 /* ==================================================
-   V0.6 戰鬥判定
+   玩家 Hurtbox
 ================================================== */
 
 function getPlayerHurtbox() {
@@ -28,9 +33,14 @@ function getPlayerHurtbox() {
   };
 }
 
+/* ==================================================
+   玩家攻擊 Hitbox
+================================================== */
+
 function getPlayerAttackHitbox() {
   if (
     !player.attacking ||
+    player.hurt ||
     player.animation !==
       "attack" ||
     player.frameIndex <
@@ -64,17 +74,23 @@ function getPlayerAttackHitbox() {
   };
 }
 
-function getOrcHurtbox() {
+/* ==================================================
+   敵人 Hurtbox
+================================================== */
+
+function getEnemyHurtbox(
+  enemy
+) {
   const width = 72;
   const height = 105;
 
   return {
     x:
-      orc.x -
+      enemy.x -
       width / 2,
 
     y:
-      orc.y -
+      enemy.y -
       height,
 
     width,
@@ -82,16 +98,22 @@ function getOrcHurtbox() {
   };
 }
 
-function getOrcAttackHitbox() {
+/* ==================================================
+   敵人攻擊 Hitbox
+================================================== */
+
+function getEnemyAttackHitbox(
+  enemy
+) {
   if (
-    orc.dead ||
-    !orc.attacking ||
-    orc.animation !==
+    enemy.dead ||
+    !enemy.attacking ||
+    enemy.animation !==
       "attack" ||
-    orc.frameIndex <
-      ORC_ATTACK_ACTIVE_START ||
-    orc.frameIndex >
-      ORC_ATTACK_ACTIVE_END
+    enemy.frameIndex <
+      ENEMY_ATTACK_ACTIVE_START ||
+    enemy.frameIndex >
+      ENEMY_ATTACK_ACTIVE_END
   ) {
     return null;
   }
@@ -102,15 +124,15 @@ function getOrcAttackHitbox() {
 
   return {
     x:
-      orc.facing === 1
-        ? orc.x +
+      enemy.facing === 1
+        ? enemy.x +
           offset
-        : orc.x -
+        : enemy.x -
           offset -
           width,
 
     y:
-      orc.y -
+      enemy.y -
       height -
       4,
 
@@ -120,60 +142,225 @@ function getOrcAttackHitbox() {
 }
 
 /* ==================================================
-   傷害
+   玩家受到傷害
 ================================================== */
 
-function damagePlayer(amount) {
+function damagePlayer(
+  amount
+) {
   if (
     gameFailed ||
-    player.invincibleTimer > 0 ||
-    player.hp <= 0
+    player.hp <= 0 ||
+    player.invincibleTimer > 0
   ) {
-    return;
+    return false;
   }
 
-  player.hp = Math.max(
-    0,
-    player.hp - amount
-  );
+  const actualDamage =
+    Math.min(
+      amount,
+      player.hp
+    );
+
+  player.hp =
+    Math.max(
+      0,
+      player.hp -
+        amount
+    );
 
   player.invincibleTimer =
     PLAYER_INVINCIBLE_TIME;
 
-  if (player.hp <= 0) {
+  createDamageNumber(
+    actualDamage,
+    player.x,
+    player.y - 82,
+    "player"
+  );
+
+  if (
+    player.hp <= 0
+  ) {
     triggerFail();
+
+    return true;
   }
+
+  triggerPlayerHurt();
+
+  return true;
 }
 
-function damageOrc(amount) {
+/* ==================================================
+   敵人受到傷害
+================================================== */
+
+function damageEnemy(
+  enemy,
+  amount
+) {
   if (
-    orc.dead ||
-    orc.hp <= 0
+    enemy.dead ||
+    enemy.hp <= 0
   ) {
+    return false;
+  }
+
+  const actualDamage =
+    Math.min(
+      amount,
+      enemy.hp
+    );
+
+  enemy.hp =
+    Math.max(
+      0,
+      enemy.hp -
+        amount
+    );
+
+  createDamageNumber(
+    actualDamage,
+    enemy.x,
+    enemy.y - 118,
+    "enemy"
+  );
+
+  if (
+    enemy.hp <= 0
+  ) {
+    startEnemyDeath(
+      enemy
+    );
+  }
+
+  return true;
+}
+
+/* ==================================================
+   玩家攻擊全部敵人
+================================================== */
+
+function resolvePlayerAttack() {
+  const playerAttackHitbox =
+    getPlayerAttackHitbox();
+
+  if (!playerAttackHitbox) {
     return;
   }
 
-  orc.hp = Math.max(
-    0,
-    orc.hp - amount
-  );
+  for (
+    const enemy of enemies
+  ) {
+    if (
+      enemy.dead ||
+      enemy.opacity <= 0
+    ) {
+      continue;
+    }
 
-  if (orc.hp <= 0) {
-    orc.dead = true;
-    orc.attacking = false;
-    orc.velocityX = 0;
-    orc.state = "dead";
-    orc.fadeTimer = 0;
+    /*
+      同一次玩家攻擊，
+      每隻敵人最多受到一次傷害。
+    */
+    if (
+      player
+        .attackHitEnemyIds
+        .has(
+          enemy.id
+        )
+    ) {
+      continue;
+    }
+
+    const enemyHurtbox =
+      getEnemyHurtbox(
+        enemy
+      );
+
+    if (
+      !rectanglesIntersect(
+        playerAttackHitbox,
+        enemyHurtbox
+      )
+    ) {
+      continue;
+    }
+
+    player
+      .attackHitEnemyIds
+      .add(
+        enemy.id
+      );
+
+    damageEnemy(
+      enemy,
+      PLAYER_ATTACK_DAMAGE
+    );
   }
 }
 
 /* ==================================================
-   身體接觸
+   敵人攻擊玩家
 ================================================== */
 
-function applyBodyContact() {
+function resolveEnemyAttacks() {
+  for (
+    const enemy of enemies
+  ) {
+    if (
+      enemy.dead ||
+      enemy.opacity <= 0 ||
+      enemy.attackHitRegistered
+    ) {
+      continue;
+    }
+
+    const enemyAttackHitbox =
+      getEnemyAttackHitbox(
+        enemy
+      );
+
+    if (!enemyAttackHitbox) {
+      continue;
+    }
+
+    const playerHurtbox =
+      getPlayerHurtbox();
+
+    if (
+      !rectanglesIntersect(
+        enemyAttackHitbox,
+        playerHurtbox
+      )
+    ) {
+      continue;
+    }
+
+    /*
+      不論玩家是否因無敵時間而免疫，
+      這次敵人攻擊都只判定一次。
+    */
+    enemy.attackHitRegistered =
+      true;
+
+    damagePlayer(
+      enemy.attackDamage
+    );
+  }
+}
+
+/* ==================================================
+   玩家與敵人身體接觸
+================================================== */
+
+function resolveBodyContact(
+  enemy
+) {
   if (
-    orc.dead ||
+    enemy.dead ||
+    enemy.opacity <= 0 ||
     gameFailed
   ) {
     return;
@@ -182,46 +369,51 @@ function applyBodyContact() {
   const playerHurtbox =
     getPlayerHurtbox();
 
-  const orcHurtbox =
-    getOrcHurtbox();
+  const enemyHurtbox =
+    getEnemyHurtbox(
+      enemy
+    );
 
   if (
     !rectanglesIntersect(
       playerHurtbox,
-      orcHurtbox
+      enemyHurtbox
     )
   ) {
     return;
   }
 
-  const playerDirection =
-    player.x < orc.x
+  /*
+    玩家位於敵人左側時，
+    玩家向左推開。
+
+    玩家位於敵人右側時，
+    玩家向右推開。
+  */
+  const playerPushDirection =
+    player.x < enemy.x
       ? -1
       : 1;
 
-  /*
-    玩家碰到 ORC 時，
-    不論等級都會被推開。
-  */
   player.x = clamp(
     player.x +
-      playerDirection *
+      playerPushDirection *
       BODY_KNOCKBACK_DISTANCE,
     52,
     WORLD_WIDTH - 52
   );
 
   /*
-    玩家等級高於 ORC 時，
-    ORC 也會被反方向推開。
+    玩家等級高於敵人時，
+    敵人也會被反方向推開。
   */
   if (
     player.level >
-    orc.level
+    enemy.level
   ) {
-    orc.x = clamp(
-      orc.x -
-        playerDirection *
+    enemy.x = clamp(
+      enemy.x -
+        playerPushDirection *
         BODY_KNOCKBACK_DISTANCE,
       80,
       WORLD_WIDTH - 80
@@ -234,6 +426,24 @@ function applyBodyContact() {
 }
 
 /* ==================================================
+   全部敵人身體接觸判定
+================================================== */
+
+function resolveAllBodyContacts() {
+  for (
+    const enemy of enemies
+  ) {
+    resolveBodyContact(
+      enemy
+    );
+
+    if (gameFailed) {
+      return;
+    }
+  }
+}
+
+/* ==================================================
    戰鬥總判定
 ================================================== */
 
@@ -241,49 +451,25 @@ function resolveCombat() {
   if (
     !gameStarted ||
     !playerControlEnabled ||
-    gameFailed ||
-    orc.dead
+    gameFailed
   ) {
     return;
   }
 
-  const playerAttackHitbox =
-    getPlayerAttackHitbox();
+  /*
+    先處理玩家攻擊。
 
-  if (
-    playerAttackHitbox &&
-    !player.attackHitRegistered &&
-    rectanglesIntersect(
-      playerAttackHitbox,
-      getOrcHurtbox()
-    )
-  ) {
-    player.attackHitRegistered =
-      true;
+    若敵人在這一幀被擊殺，
+    後續敵人攻擊與接觸判定
+    會自動略過該敵人。
+  */
+  resolvePlayerAttack();
 
-    damageOrc(
-      PLAYER_ATTACK_DAMAGE
-    );
+  resolveEnemyAttacks();
+
+  if (gameFailed) {
+    return;
   }
 
-  const orcAttackHitbox =
-    getOrcAttackHitbox();
-
-  if (
-    orcAttackHitbox &&
-    !orc.attackHitRegistered &&
-    rectanglesIntersect(
-      orcAttackHitbox,
-      getPlayerHurtbox()
-    )
-  ) {
-    orc.attackHitRegistered =
-      true;
-
-    damagePlayer(
-      ORC_ATTACK_DAMAGE
-    );
-  }
-
-  applyBodyContact();
+  resolveAllBodyContacts();
 }

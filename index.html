@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>Hooded Escape V0.5.3</title>
+  <title>Hooded Escape V0.5.4</title>
 
   <style>
     * {
@@ -49,6 +49,10 @@
     select {
       font: inherit;
     }
+
+    /* ==================================================
+       遊戲容器
+    ================================================== */
 
     #game-wrapper {
       position: relative;
@@ -555,6 +559,72 @@
     }
 
     /* ==================================================
+       Stage Intro
+    ================================================== */
+
+    #stage-intro {
+      position: absolute;
+      inset: 0;
+      z-index: 350;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: rgba(0, 0, 0, 0.58);
+
+      opacity: 0;
+      visibility: hidden;
+
+      pointer-events: none;
+    }
+
+    #stage-intro.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #stage-intro.fade-out {
+      opacity: 0;
+
+      transition:
+        opacity 0.5s ease;
+    }
+
+    #stage-intro-title {
+      color: #ffffff;
+
+      font-size: clamp(52px, 8vw, 104px);
+      font-weight: 900;
+
+      letter-spacing: clamp(9px, 1.8vw, 24px);
+
+      text-shadow:
+        0 4px 0 rgba(0, 0, 0, 0.55),
+        0 14px 36px rgba(0, 0, 0, 0.8);
+
+      opacity: 0;
+      transform: scale(0.88);
+    }
+
+    #stage-intro.visible #stage-intro-title {
+      animation:
+        stageTitleEnter 0.3s ease forwards;
+    }
+
+    @keyframes stageTitleEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.88);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ==================================================
        電腦版 HUD
     ================================================== */
 
@@ -650,7 +720,7 @@
         opacity 0.4s ease;
     }
 
-    body.game-started #touch-controls {
+    body.game-started.player-control-enabled #touch-controls {
       opacity: 1;
       visibility: visible;
     }
@@ -902,6 +972,15 @@
       </div>
     </section>
 
+    <section
+      id="stage-intro"
+      aria-label="關卡開始"
+    >
+      <div id="stage-intro-title">
+        STAGE 1
+      </div>
+    </section>
+
     <div id="desktop-help">
       A／D 或方向鍵移動｜W／空白鍵跳躍｜S 蹲下｜Shift 跑步｜攻擊：
       <span id="attack-key-label">Z</span>
@@ -987,6 +1066,12 @@
     const enterDungeonButton =
       document.getElementById("enter-dungeon-button");
 
+    const stageIntro =
+      document.getElementById("stage-intro");
+
+    const stageIntroTitle =
+      document.getElementById("stage-intro-title");
+
     const attackKeySelect =
       document.getElementById("attack-key-select");
 
@@ -1032,6 +1117,10 @@
 
     const ORIENTATION_FADE_TIME = 650;
 
+    const STAGE_INTRO_HOLD_TIME = 500;
+    const STAGE_INTRO_FADE_TIME = 500;
+    const LOADING_PAGE_FADE_TIME = 850;
+
     /* ==================================================
        ORC1 AI
     ================================================== */
@@ -1048,8 +1137,10 @@
     const ORC_DRAW_MARGIN = 260;
 
     /*
-      腳底自動偵測後再額外補 1 原始像素，
-      讓腳掌略微壓在地面線上。
+      自動 Anchor 偵測完成後，
+      再向下補償 4 個原始素材像素。
+
+      4 × 2.3 = 9.2px
     */
     const ORC_EXTRA_FOOT_OFFSET = 4;
 
@@ -1063,6 +1154,9 @@
 
     let gameStarted = false;
     let gameLoopStarted = false;
+
+    let playerControlEnabled = false;
+    let stageIntroPlaying = false;
 
     let orientationTransitioning = false;
 
@@ -1104,12 +1198,6 @@
 
       velocityX: 0,
 
-      /*
-        1 代表世界右方。
-        -1 代表世界左方。
-
-        ORC 素材繪製時會反轉一次。
-      */
       facing: -1,
 
       animation: "idle",
@@ -1361,7 +1449,7 @@
     );
 
     /* ==================================================
-       素材載入與腳底偵測
+       素材載入與 ORC 腳底偵測
     ================================================== */
 
     function loadImage(path) {
@@ -1443,10 +1531,8 @@
       }
 
       /*
-        只掃描圖片中央區域。
-
-        避免攻擊動畫左右伸出的武器，
-        被誤判為角色腳底。
+        僅掃描圖片中央區域，
+        避免武器被誤認為腳底。
       */
       const startX =
         Math.floor(
@@ -1889,10 +1975,70 @@
     }
 
     /* ==================================================
+       Stage Intro
+    ================================================== */
+
+    async function playStageIntro() {
+      if (stageIntroPlaying) {
+        return;
+      }
+
+      stageIntroPlaying = true;
+      playerControlEnabled = false;
+
+      document.body.classList.remove(
+        "player-control-enabled"
+      );
+
+      resetAllInputs();
+
+      stageIntroTitle.textContent =
+        "STAGE 1";
+
+      stageIntro.classList.remove(
+        "fade-out"
+      );
+
+      stageIntro.classList.add(
+        "visible"
+      );
+
+      await waitForNextPaint();
+
+      await wait(
+        STAGE_INTRO_HOLD_TIME
+      );
+
+      stageIntro.classList.add(
+        "fade-out"
+      );
+
+      await wait(
+        STAGE_INTRO_FADE_TIME
+      );
+
+      stageIntro.classList.remove(
+        "visible",
+        "fade-out"
+      );
+
+      resetAllInputs();
+
+      playerControlEnabled = true;
+      stageIntroPlaying = false;
+
+      document.body.classList.add(
+        "player-control-enabled"
+      );
+
+      canvas.focus();
+    }
+
+    /* ==================================================
        開始遊戲
     ================================================== */
 
-    function startGame() {
+    async function startGame() {
       if (
         gameStarted ||
         !assetsLoaded ||
@@ -1902,23 +2048,36 @@
       }
 
       gameStarted = true;
+      playerControlEnabled = false;
 
       resetAllInputs();
       snapCameraToPlayer();
-
-      loadingPage.classList.add(
-        "game-entered"
-      );
 
       document.body.classList.add(
         "game-started"
       );
 
-      canvas.focus();
+      document.body.classList.remove(
+        "player-control-enabled"
+      );
+
+      loadingPage.classList.add(
+        "game-entered"
+      );
 
       window.setTimeout(() => {
         updateJoystickCenter();
       }, 100);
+
+      /*
+        等待 Loading Page 完成 0.8 秒淡出，
+        再顯示 STAGE 1。
+      */
+      await wait(
+        LOADING_PAGE_FADE_TIME
+      );
+
+      await playStageIntro();
     }
 
     enterDungeonButton.addEventListener(
@@ -1987,12 +2146,6 @@
         return;
       }
 
-      /*
-        Jump 動畫依垂直速度選擇影格。
-
-        空中攻擊時 animation 是 attack，
-        不會進入這一段。
-      */
       if (
         player.animation ===
         "jump"
@@ -2186,6 +2339,7 @@
     function triggerJump() {
       if (
         !gameStarted ||
+        !playerControlEnabled ||
         !player.grounded ||
         player.attacking ||
         player.ducking
@@ -2208,6 +2362,7 @@
     function triggerPlayerAttack() {
       if (
         !gameStarted ||
+        !playerControlEnabled ||
         player.attacking ||
         player.ducking
       ) {
@@ -2217,15 +2372,9 @@
       player.attacking = true;
 
       if (player.grounded) {
-        /*
-          地面攻擊停止移動。
-        */
         player.airAttacking = false;
         player.velocityX = 0;
       } else {
-        /*
-          空中攻擊保留原本 X、Y 速度。
-        */
         player.airAttacking = true;
       }
 
@@ -2244,6 +2393,36 @@
             deltaTime
           );
         }
+
+        return;
+      }
+
+      /*
+        Stage Intro 期間：
+        玩家固定保持 Idle，不能移動或攻擊。
+      */
+      if (!playerControlEnabled) {
+        player.velocityX = 0;
+        player.velocityY = 0;
+
+        player.y =
+          WORLD_GROUND_Y;
+
+        player.grounded = true;
+        player.ducking = false;
+        player.attacking = false;
+        player.airAttacking = false;
+
+        pressed.jump = false;
+        pressed.attack = false;
+
+        setPlayerAnimation(
+          "idle"
+        );
+
+        updatePlayerAnimation(
+          deltaTime
+        );
 
         return;
       }
@@ -2339,12 +2518,6 @@
           }
         }
       } else {
-        /*
-          地面攻擊與蹲下停止水平移動。
-
-          空中攻擊保留水平慣性，
-          不會在空中突然定住。
-        */
         if (
           !player.airAttacking
         ) {
@@ -2363,9 +2536,6 @@
           GRAVITY *
           deltaTime;
 
-        /*
-          空中攻擊時不可被 Jump 動畫覆蓋。
-        */
         if (
           !player.airAttacking
         ) {
@@ -2402,12 +2572,6 @@
         player.velocityY = 0;
         player.grounded = true;
 
-        /*
-          如果空中攻擊尚未播完，
-          落地後繼續播放攻擊動畫。
-
-          攻擊結束後才回到 Idle。
-        */
         if (
           wasAirborne &&
           !player.attacking
@@ -2473,6 +2637,26 @@
             deltaTime
           );
         }
+
+        return;
+      }
+
+      /*
+        Stage Intro 期間敵人保持 Idle，
+        不提前靠近或攻擊玩家。
+      */
+      if (!playerControlEnabled) {
+        orc.velocityX = 0;
+        orc.attacking = false;
+        orc.state = "patrol";
+
+        setOrcAnimation(
+          "idle"
+        );
+
+        updateOrcAnimation(
+          deltaTime
+        );
 
         return;
       }
@@ -3134,13 +3318,8 @@
     function drawEntityShadow(
       worldX,
       radiusX,
-      radiusY,
-      visible = true
+      radiusY
     ) {
-      if (!visible) {
-        return;
-      }
-
       const screenX =
         worldToScreenX(
           worldX
@@ -3363,9 +3542,6 @@
         )
       );
 
-      /*
-        ORC 原始素材朝向與玩家相反。
-      */
       context.scale(
         -orc.facing,
         1
@@ -3409,8 +3585,8 @@
       context.fillRect(
         16,
         22,
-        330,
-        194
+        350,
+        220
       );
 
       context.fillStyle =
@@ -3452,13 +3628,23 @@
       );
 
       context.fillText(
+        `玩家控制：${
+          playerControlEnabled
+            ? "開啟"
+            : "鎖定"
+        }`,
+        42,
+        155
+      );
+
+      context.fillText(
         `相機：${Math.round(
           camera.x
         )}, ${Math.round(
           camera.y
         )}`,
         42,
-        155
+        181
       );
 
       context.fillText(
@@ -3468,13 +3654,16 @@
           ] || orc.state
         }`,
         42,
-        181
+        207
       );
 
       context.fillText(
-        `ORC Anchor：${getCurrentOrcFootOffset()}px`,
+        `ORC Anchor：${
+          getCurrentOrcFootOffset() +
+          ORC_EXTRA_FOOT_OFFSET
+        }px`,
         42,
-        207
+        233
       );
 
       context.restore();
@@ -3497,16 +3686,11 @@
         drawEntityShadow(
           orc.x,
           62,
-          13,
-          true
+          13
         );
 
         drawOrc();
 
-        /*
-          玩家跳躍時陰影仍保留在地面，
-          但可依高度稍微縮小。
-        */
         const playerHeight =
           Math.max(
             0,
@@ -3528,8 +3712,7 @@
           50 *
             shadowScale,
           12 *
-            shadowScale,
-          true
+            shadowScale
         );
 
         drawPlayer();
@@ -3609,6 +3792,7 @@
       (event) => {
         if (
           !gameStarted ||
+          !playerControlEnabled ||
           document.activeElement ===
             attackKeySelect
         ) {
@@ -3782,7 +3966,10 @@
     joystickZone.addEventListener(
       "pointerdown",
       (event) => {
-        if (!gameStarted) {
+        if (
+          !gameStarted ||
+          !playerControlEnabled
+        ) {
           return;
         }
 
@@ -3819,6 +4006,7 @@
       (event) => {
         if (
           !gameStarted ||
+          !playerControlEnabled ||
           !joystick.active ||
           event.pointerId !==
             joystick.pointerId
@@ -3863,7 +4051,10 @@
           button.dataset.control;
 
         function activate(event) {
-          if (!gameStarted) {
+          if (
+            !gameStarted ||
+            !playerControlEnabled
+          ) {
             return;
           }
 

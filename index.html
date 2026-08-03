@@ -11,10 +11,15 @@
   <title>Hooded Escape</title>
 
   <style>
+    /* ==================================================
+       基礎設定
+    ================================================== */
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+
       user-select: none;
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
@@ -24,11 +29,18 @@
     body {
       width: 100%;
       height: 100%;
+
       overflow: hidden;
+
       background: #07090e;
+
       touch-action: none;
       overscroll-behavior: none;
-      font-family: Arial, "Microsoft JhengHei", sans-serif;
+
+      font-family:
+        Arial,
+        "Microsoft JhengHei",
+        sans-serif;
     }
 
     body {
@@ -42,6 +54,10 @@
       font: inherit;
     }
 
+    /* ==================================================
+       遊戲容器
+    ================================================== */
+
     #game-wrapper {
       position: relative;
 
@@ -52,11 +68,13 @@
       max-height: 720px;
 
       overflow: hidden;
+
       background: #111722;
     }
 
     #game-canvas {
       display: block;
+
       width: 100%;
       height: 100%;
 
@@ -147,6 +165,7 @@
       height: 8px;
 
       border-radius: 50%;
+
       background: rgba(255, 255, 255, 0.9);
 
       transform: translateX(-50%);
@@ -162,6 +181,7 @@
       margin-left: 20px;
 
       color: rgba(255, 255, 255, 0.85);
+
       font-size: 46px;
 
       transform: translateY(-50%);
@@ -170,6 +190,7 @@
     .orientation-title {
       font-size: clamp(24px, 6vw, 38px);
       font-weight: 700;
+
       letter-spacing: 2px;
     }
 
@@ -329,6 +350,7 @@
       margin-bottom: 50px;
 
       opacity: 0;
+
       transform: translateY(18px);
     }
 
@@ -376,6 +398,7 @@
       width: 100%;
 
       opacity: 1;
+
       transform: translateY(0);
 
       transition:
@@ -385,7 +408,9 @@
 
     #loading-status.hidden {
       opacity: 0;
+
       transform: translateY(-10px);
+
       pointer-events: none;
     }
 
@@ -394,6 +419,7 @@
 
       display: flex;
       justify-content: space-between;
+
       gap: 18px;
 
       color: rgba(255, 255, 255, 0.78);
@@ -408,6 +434,7 @@
 
     #progress-number {
       min-width: 48px;
+
       text-align: right;
     }
 
@@ -485,6 +512,7 @@
       top: calc(100% - 72px);
 
       min-width: 230px;
+
       padding: 15px 34px;
 
       border: 1px solid rgba(255, 255, 255, 0.42);
@@ -524,6 +552,7 @@
     #enter-dungeon-button.visible {
       opacity: 1;
       visibility: visible;
+
       transform: translateY(0);
     }
 
@@ -563,12 +592,14 @@
       color: rgba(255, 255, 255, 0.9);
 
       font-size: 15px;
+
       white-space: nowrap;
 
       opacity: 0;
       visibility: hidden;
 
-      transition: opacity 0.4s ease;
+      transition:
+        opacity 0.4s ease;
 
       pointer-events: none;
     }
@@ -581,6 +612,7 @@
 
       display: flex;
       align-items: center;
+
       gap: 8px;
 
       padding: 8px 10px;
@@ -596,11 +628,13 @@
       opacity: 0;
       visibility: hidden;
 
-      transition: opacity 0.4s ease;
+      transition:
+        opacity 0.4s ease;
     }
 
     #attack-key-select {
       min-width: 58px;
+
       padding: 5px 8px;
 
       border: 1px solid rgba(255, 255, 255, 0.3);
@@ -630,7 +664,8 @@
       opacity: 0;
       visibility: hidden;
 
-      transition: opacity 0.4s ease;
+      transition:
+        opacity 0.4s ease;
 
       pointer-events: none;
     }
@@ -640,20 +675,22 @@
       visibility: visible;
     }
 
+    /* 虛擬搖桿縮小 */
     #joystick-zone {
       position: absolute;
 
-      left: max(28px, env(safe-area-inset-left));
-      bottom: max(28px, env(safe-area-inset-bottom));
+      left: max(24px, env(safe-area-inset-left));
+      bottom: max(24px, env(safe-area-inset-bottom));
 
-      width: clamp(150px, 19vw, 220px);
-      height: clamp(150px, 19vw, 220px);
+      width: clamp(120px, 15vw, 170px);
+      height: clamp(120px, 15vw, 170px);
 
       display: flex;
       align-items: center;
       justify-content: center;
 
       pointer-events: auto;
+
       touch-action: none;
     }
 
@@ -679,8 +716,11 @@
     #joystick-base::before,
     #joystick-base::after {
       content: "";
+
       position: absolute;
+
       background: rgba(255, 255, 255, 0.1);
+
       pointer-events: none;
     }
 
@@ -688,7 +728,9 @@
       top: 50%;
       left: 15%;
       right: 15%;
+
       height: 2px;
+
       transform: translateY(-50%);
     }
 
@@ -696,7 +738,9 @@
       left: 50%;
       top: 15%;
       bottom: 15%;
+
       width: 2px;
+
       transform: translateX(-50%);
     }
 
@@ -730,20 +774,20 @@
     #action-controls {
       position: absolute;
 
-      right: max(30px, env(safe-area-inset-right));
-      bottom: max(30px, env(safe-area-inset-bottom));
+      right: max(24px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
 
       display: flex;
       align-items: flex-end;
 
-      gap: clamp(16px, 2vw, 28px);
+      gap: clamp(14px, 1.8vw, 24px);
 
       pointer-events: auto;
     }
 
     .action-button {
-      width: clamp(70px, 9vw, 108px);
-      height: clamp(70px, 9vw, 108px);
+      width: clamp(64px, 7.8vw, 94px);
+      height: clamp(64px, 7.8vw, 94px);
 
       display: flex;
       align-items: center;
@@ -755,7 +799,7 @@
       background: rgba(8, 11, 18, 0.55);
       color: #ffffff;
 
-      font-size: clamp(18px, 2.2vw, 28px);
+      font-size: clamp(17px, 2vw, 25px);
       font-weight: 700;
 
       box-shadow:
@@ -775,8 +819,12 @@
     }
 
     #jump-button {
-      margin-bottom: clamp(38px, 5vw, 68px);
+      margin-bottom: clamp(32px, 4vw, 54px);
     }
+
+    /* ==================================================
+       裝置判斷
+    ================================================== */
 
     @media (hover: hover) and (pointer: fine) {
       #touch-controls {
@@ -818,6 +866,7 @@
       tabindex="0"
     ></canvas>
 
+    <!-- 手機直向提示 -->
     <section
       id="orientation-screen"
       aria-label="請旋轉手機"
@@ -840,6 +889,7 @@
       </div>
     </section>
 
+    <!-- Loading Page -->
     <section
       id="loading-page"
       aria-label="遊戲載入畫面"
@@ -880,11 +930,13 @@
       </div>
     </section>
 
+    <!-- 電腦版操作提示 -->
     <div id="desktop-help">
       方向鍵移動｜↑ 跳躍｜↓ 蹲下｜Shift 跑步｜攻擊：
       <span id="attack-key-label">Z</span>
     </div>
 
+    <!-- 電腦版攻擊鍵設定 -->
     <div id="keyboard-settings">
       <label for="attack-key-select">
         攻擊鍵
@@ -901,6 +953,7 @@
       </select>
     </div>
 
+    <!-- 手機版操作 -->
     <div id="touch-controls">
       <div id="joystick-zone">
         <div id="joystick-base">
@@ -935,6 +988,10 @@
   <script>
     "use strict";
 
+    /* ==================================================
+       DOM
+    ================================================== */
+
     const canvas =
       document.getElementById("game-canvas");
 
@@ -968,7 +1025,20 @@
     const attackKeyLabel =
       document.getElementById("attack-key-label");
 
+    const joystickZone =
+      document.getElementById("joystick-zone");
+
+    const joystickBase =
+      document.getElementById("joystick-base");
+
+    const joystickStick =
+      document.getElementById("joystick-stick");
+
     context.imageSmoothingEnabled = false;
+
+    /* ==================================================
+       遊戲常數
+    ================================================== */
 
     const GAME_WIDTH = 1280;
     const GAME_HEIGHT = 720;
@@ -980,7 +1050,10 @@
     const RUN_SPEED = 420;
     const JUMP_FORCE = 820;
 
-    const PLAYER_SCALE = 2.2;
+    /*
+      角色由 2.2 提高至 2.6。
+    */
+    const PLAYER_SCALE = 2.6;
 
     const JOYSTICK_DEAD_ZONE = 0.14;
     const RUN_THRESHOLD = 0.72;
@@ -988,15 +1061,25 @@
 
     const ORIENTATION_FADE_TIME = 650;
 
+    /* ==================================================
+       遊戲狀態
+    ================================================== */
+
     let assetsLoaded = false;
     let fakeLoadingCompleted = false;
     let loadingSequenceStarted = false;
+
     let gameStarted = false;
     let gameLoopStarted = false;
+
     let orientationTransitioning = false;
 
     let previousTime =
       performance.now();
+
+    /* ==================================================
+       裝置工具
+    ================================================== */
 
     function isTouchDevice() {
       return (
@@ -1032,6 +1115,10 @@
         });
       });
     }
+
+    /* ==================================================
+       攻擊鍵設定
+    ================================================== */
 
     const ATTACK_KEY_STORAGE =
       "hoodedCharacterAttackKey";
@@ -1076,9 +1163,14 @@
           allowedAttackKeys[attackKeyCode];
 
         resetAllInputs();
+
         canvas.focus();
       }
     );
+
+    /* ==================================================
+       動畫素材設定
+    ================================================== */
 
     const animationDefinitions = {
       idle: {
@@ -1132,6 +1224,10 @@
 
     const animations = {};
 
+    /* ==================================================
+       輸入狀態
+    ================================================== */
+
     const input = {
       left: false,
       right: false,
@@ -1152,12 +1248,18 @@
 
       centerX: 0,
       centerY: 0,
+
       radius: 0,
 
       x: 0,
       y: 0,
+
       magnitude: 0
     };
+
+    /* ==================================================
+       玩家
+    ================================================== */
 
     const player = {
       x: 200,
@@ -1176,9 +1278,14 @@
       attacking: false,
 
       animation: "idle",
+
       frameIndex: 0,
       frameTimer: 0
     };
+
+    /* ==================================================
+       圖片載入
+    ================================================== */
 
     function padNumber(number) {
       return String(number).padStart(
@@ -1236,9 +1343,12 @@
       ) {
         animations[animationName] = {
           frames: [],
+
           frameDuration:
             definition.frameDuration,
-          loop: definition.loop
+
+          loop:
+            definition.loop
         };
 
         for (
@@ -1272,6 +1382,10 @@
       );
     }
 
+    /* ==================================================
+       假讀取
+    ================================================== */
+
     function setLoadingProgress(
       progress,
       message
@@ -1286,9 +1400,7 @@
         `${safeProgress}%`;
 
       progressNumber.textContent =
-        `${Math.floor(
-          safeProgress
-        )}%`;
+        `${Math.floor(safeProgress)}%`;
 
       if (message) {
         loadingMessage.textContent =
@@ -1325,7 +1437,9 @@
 
           const progress =
             start +
-            (end - start) *
+            (
+              end - start
+            ) *
             easedRatio;
 
           setLoadingProgress(
@@ -1342,7 +1456,9 @@
           }
         }
 
-        requestAnimationFrame(update);
+        requestAnimationFrame(
+          update
+        );
       });
     }
 
@@ -1464,6 +1580,10 @@
       }
     }
 
+    /* ==================================================
+       直向與橫向轉場
+    ================================================== */
+
     function showOrientationScreen() {
       orientationScreen.classList.remove(
         "fade-out"
@@ -1487,8 +1607,7 @@
       orientationTransitioning = true;
 
       /*
-        先讓 Loading Page 進入 DOM 可見狀態，
-        但仍保持透明，並位於提示畫面下方。
+        先在提示畫面下方準備 Loading Page。
       */
       loadingPage.classList.add(
         "prepared"
@@ -1497,9 +1616,8 @@
       await waitForNextPaint();
 
       /*
-        同一時間：
-        Loading Page 淡入。
-        提示畫面淡出。
+        Loading Page 淡入，
+        提示畫面同步淡出。
       */
       loadingPage.classList.add(
         "visible"
@@ -1509,9 +1627,6 @@
         "fade-out"
       );
 
-      /*
-        開始真正的素材及假進度讀取。
-      */
       startLoadingSequence();
 
       await wait(
@@ -1550,6 +1665,10 @@
       }
     }
 
+    /* ==================================================
+       開始遊戲
+    ================================================== */
+
     function startGame() {
       if (
         gameStarted ||
@@ -1582,6 +1701,10 @@
       "click",
       startGame
     );
+
+    /* ==================================================
+       動畫控制
+    ================================================== */
 
     function setAnimation(
       animationName,
@@ -1693,6 +1816,10 @@
       }
     }
 
+    /* ==================================================
+       玩家控制
+    ================================================== */
+
     function triggerJump() {
       if (
         !gameStarted ||
@@ -1705,6 +1832,7 @@
 
       player.grounded = false;
       player.ducking = false;
+
       player.velocityY =
         -JUMP_FORCE;
 
@@ -1724,6 +1852,7 @@
 
       player.attacking = true;
       player.ducking = false;
+
       player.velocityX = 0;
 
       setAnimation(
@@ -1752,7 +1881,9 @@
       }
 
       if (
-        Math.abs(horizontalDirection) >
+        Math.abs(
+          horizontalDirection
+        ) >
         JOYSTICK_DEAD_ZONE
       ) {
         const shouldRun =
@@ -1775,7 +1906,9 @@
     function updatePlayer(deltaTime) {
       if (!gameStarted) {
         if (assetsLoaded) {
-          updateAnimation(deltaTime);
+          updateAnimation(
+            deltaTime
+          );
         }
 
         return;
@@ -1783,11 +1916,13 @@
 
       if (pressed.jump) {
         triggerJump();
+
         pressed.jump = false;
       }
 
       if (pressed.attack) {
         triggerAttack();
+
         pressed.attack = false;
       }
 
@@ -1796,7 +1931,9 @@
         Number(input.left);
 
       let analogStrength =
-        Math.abs(horizontalDirection);
+        Math.abs(
+          horizontalDirection
+        );
 
       if (joystick.active) {
         horizontalDirection =
@@ -1850,6 +1987,7 @@
               : -1;
         } else {
           horizontalDirection = 0;
+
           player.velocityX = 0;
         }
       } else {
@@ -1870,8 +2008,12 @@
         player.velocityY *
         deltaTime;
 
+      /*
+        放大角色後增加少量邊界，
+        避免角色太靠近畫面兩側。
+      */
       const boundary =
-        player.width * 0.35;
+        52;
 
       player.x = Math.max(
         boundary,
@@ -1883,7 +2025,9 @@
 
       if (player.y >= GROUND_Y) {
         player.y = GROUND_Y;
+
         player.velocityY = 0;
+
         player.grounded = true;
       }
 
@@ -1892,8 +2036,14 @@
         analogStrength
       );
 
-      updateAnimation(deltaTime);
+      updateAnimation(
+        deltaTime
+      );
     }
+
+    /* ==================================================
+       Canvas 繪製
+    ================================================== */
 
     function drawBackground() {
       const gradient =
@@ -1944,6 +2094,22 @@
         GAME_WIDTH,
         5
       );
+
+      context.fillStyle =
+        "rgba(255, 255, 255, 0.06)";
+
+      for (
+        let x = 0;
+        x < GAME_WIDTH;
+        x += 84
+      ) {
+        context.fillRect(
+          x,
+          GROUND_Y + 38,
+          48,
+          4
+        );
+      }
     }
 
     function drawPlayerShadow() {
@@ -1960,14 +2126,15 @@
       context.ellipse(
         player.x,
         GROUND_Y + 5,
-        42,
-        10,
+        50,
+        12,
         0,
         0,
         Math.PI * 2
       );
 
       context.fill();
+
       context.restore();
     }
 
@@ -2016,14 +2183,22 @@
 
       context.drawImage(
         frame,
+
         Math.round(
           -drawWidth / 2
         ),
+
         Math.round(
           -drawHeight
         ),
-        Math.round(drawWidth),
-        Math.round(drawHeight)
+
+        Math.round(
+          drawWidth
+        ),
+
+        Math.round(
+          drawHeight
+        )
       );
 
       context.restore();
@@ -2034,7 +2209,7 @@
         return;
       }
 
-      const names = {
+      const animationNames = {
         idle: "待機",
         walk: "行走",
         run: "跑步",
@@ -2062,7 +2237,7 @@
         "22px Arial, Microsoft JhengHei";
 
       context.fillText(
-        `動畫：${names[player.animation]}`,
+        `動畫：${animationNames[player.animation]}`,
         42,
         57
       );
@@ -2101,6 +2276,10 @@
 
       drawStatus();
     }
+
+    /* ==================================================
+       鍵盤輸入
+    ================================================== */
 
     function getControlFromKey(code) {
       if (code === attackKeyCode) {
@@ -2211,20 +2390,9 @@
       }
     );
 
-    const joystickZone =
-      document.getElementById(
-        "joystick-zone"
-      );
-
-    const joystickBase =
-      document.getElementById(
-        "joystick-base"
-      );
-
-    const joystickStick =
-      document.getElementById(
-        "joystick-stick"
-      );
+    /* ==================================================
+       虛擬搖桿
+    ================================================== */
 
     function updateJoystickCenter() {
       const rect =
@@ -2326,6 +2494,7 @@
 
       joystick.x = 0;
       joystick.y = 0;
+
       joystick.magnitude = 0;
 
       joystickStick.style.transform =
@@ -2348,6 +2517,7 @@
         updateJoystickCenter();
 
         joystick.active = true;
+
         joystick.pointerId =
           event.pointerId;
 
@@ -2393,7 +2563,18 @@
 
     joystickZone.addEventListener(
       "pointerup",
-      resetJoystick
+      (event) => {
+        if (
+          event.pointerId !==
+          joystick.pointerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        resetJoystick();
+      }
     );
 
     joystickZone.addEventListener(
@@ -2405,6 +2586,10 @@
       "lostpointercapture",
       resetJoystick
     );
+
+    /* ==================================================
+       手機動作按鈕
+    ================================================== */
 
     document
       .querySelectorAll(
@@ -2472,7 +2657,18 @@
           "lostpointercapture",
           deactivate
         );
+
+        button.addEventListener(
+          "contextmenu",
+          (event) => {
+            event.preventDefault();
+          }
+        );
       });
+
+    /* ==================================================
+       輸入重置
+    ================================================== */
 
     function resetAllInputs() {
       for (
@@ -2532,10 +2728,15 @@
 
         window.setTimeout(() => {
           handleOrientationState();
+
           updateJoystickCenter();
         }, 250);
       }
     );
+
+    /* ==================================================
+       遊戲循環
+    ================================================== */
 
     function gameLoop(currentTime) {
       const rawDeltaTime =
@@ -2553,13 +2754,20 @@
       previousTime =
         currentTime;
 
-      updatePlayer(deltaTime);
+      updatePlayer(
+        deltaTime
+      );
+
       render();
 
       requestAnimationFrame(
         gameLoop
       );
     }
+
+    /* ==================================================
+       初始化
+    ================================================== */
 
     function initializeGame() {
       if (!gameLoopStarted) {

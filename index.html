@@ -5,22 +5,21 @@
 
   <meta
     name="viewport"
-    content="
-      width=device-width,
-      initial-scale=1,
-      maximum-scale=1,
-      user-scalable=no,
-      viewport-fit=cover
-    "
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>2D Hooded Character Controller</title>
+  <title>Hooded Escape</title>
 
   <style>
+    /* ==================================================
+       基礎設定
+    ================================================== */
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+
       user-select: none;
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
@@ -30,11 +29,18 @@
     body {
       width: 100%;
       height: 100%;
+
       overflow: hidden;
-      background: #090c12;
+
+      background: #07090e;
+
       touch-action: none;
       overscroll-behavior: none;
-      font-family: Arial, "Microsoft JhengHei", sans-serif;
+
+      font-family:
+        Arial,
+        "Microsoft JhengHei",
+        sans-serif;
     }
 
     body {
@@ -45,8 +51,12 @@
 
     button,
     select {
-      font-family: inherit;
+      font: inherit;
     }
+
+    /* ==================================================
+       遊戲主容器
+    ================================================== */
 
     #game-wrapper {
       position: relative;
@@ -58,11 +68,13 @@
       max-height: 720px;
 
       overflow: hidden;
-      background: #171d29;
+
+      background: #111722;
     }
 
     #game-canvas {
       display: block;
+
       width: 100%;
       height: 100%;
 
@@ -70,29 +82,437 @@
       image-rendering: crisp-edges;
     }
 
-    /* =========================
-       讀取畫面
-    ========================= */
+    /* ==================================================
+       手機直向提示
+    ================================================== */
 
-    #loading-screen {
+    #orientation-screen {
       position: absolute;
       inset: 0;
-      z-index: 100;
+      z-index: 500;
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        radial-gradient(
+          circle at center,
+          #171d2a 0%,
+          #090c12 72%
+        );
+
+      color: #ffffff;
+    }
+
+    .orientation-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      gap: 24px;
+
+      padding: 30px;
+
+      text-align: center;
+
+      animation: orientationBreathe 2s ease-in-out infinite;
+    }
+
+    .phone-rotate-icon {
+      position: relative;
+
+      width: 74px;
+      height: 122px;
+
+      border: 4px solid rgba(255, 255, 255, 0.9);
+      border-radius: 14px;
+
+      transform: rotate(-18deg);
+
+      animation: phoneRotate 2.2s ease-in-out infinite;
+    }
+
+    .phone-rotate-icon::before {
+      content: "";
+
+      position: absolute;
+      left: 50%;
+      bottom: 7px;
+
+      width: 8px;
+      height: 8px;
+
+      border-radius: 50%;
+
+      background: rgba(255, 255, 255, 0.9);
+
+      transform: translateX(-50%);
+    }
+
+    .phone-rotate-icon::after {
+      content: "↻";
+
+      position: absolute;
+      top: 50%;
+      left: 100%;
+
+      margin-left: 20px;
+
+      color: rgba(255, 255, 255, 0.85);
+
+      font-size: 46px;
+
+      transform: translateY(-50%);
+    }
+
+    .orientation-title {
+      font-size: clamp(24px, 6vw, 38px);
+      font-weight: 700;
+
+      letter-spacing: 2px;
+    }
+
+    .orientation-subtitle {
+      color: rgba(255, 255, 255, 0.65);
+
+      font-size: clamp(14px, 3.5vw, 18px);
+      line-height: 1.6;
+    }
+
+    @keyframes orientationBreathe {
+      0%,
+      100% {
+        opacity: 0.58;
+        transform: scale(0.96);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.04);
+      }
+    }
+
+    @keyframes phoneRotate {
+      0%,
+      100% {
+        transform: rotate(-18deg);
+      }
+
+      50% {
+        transform: rotate(72deg);
+      }
+    }
+
+    /* ==================================================
+       Loading Page
+    ================================================== */
+
+    #loading-page {
+      position: absolute;
+      inset: 0;
+      z-index: 400;
 
       display: flex;
       align-items: center;
       justify-content: center;
 
-      background: #10151e;
-      color: #ffffff;
+      overflow: hidden;
 
-      font-size: clamp(16px, 2.2vw, 28px);
-      letter-spacing: 2px;
+      background:
+        radial-gradient(
+          circle at 50% 42%,
+          rgba(48, 58, 80, 0.62) 0%,
+          rgba(14, 18, 28, 0.96) 48%,
+          #07090e 100%
+        );
+
+      opacity: 1;
+      visibility: visible;
+
+      transition:
+        opacity 0.8s ease,
+        visibility 0.8s ease;
     }
 
-    /* =========================
-       電腦版操作說明
-    ========================= */
+    #loading-page.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #loading-page::before {
+      content: "";
+
+      position: absolute;
+      inset: 0;
+
+      opacity: 0.12;
+
+      background-image:
+        linear-gradient(
+          rgba(255, 255, 255, 0.04) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.04) 1px,
+          transparent 1px
+        );
+
+      background-size: 48px 48px;
+
+      animation: loadingGridMove 10s linear infinite;
+    }
+
+    #loading-page::after {
+      content: "";
+
+      position: absolute;
+      left: 50%;
+      bottom: -130px;
+
+      width: 640px;
+      height: 260px;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          ellipse,
+          rgba(93, 111, 148, 0.25) 0%,
+          transparent 70%
+        );
+
+      transform: translateX(-50%);
+    }
+
+    @keyframes loadingGridMove {
+      from {
+        background-position: 0 0;
+      }
+
+      to {
+        background-position: 48px 48px;
+      }
+    }
+
+    .loading-content {
+      position: relative;
+      z-index: 2;
+
+      width: min(78%, 560px);
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      text-align: center;
+    }
+
+    .game-logo {
+      margin-bottom: 50px;
+
+      opacity: 0;
+
+      transform: translateY(18px);
+
+      animation: logoFadeIn 0.9s ease forwards;
+    }
+
+    .logo-main {
+      display: block;
+
+      color: #f4f5f7;
+
+      font-size: clamp(42px, 7vw, 86px);
+      font-weight: 900;
+
+      letter-spacing: clamp(6px, 1.1vw, 14px);
+
+      text-shadow:
+        0 4px 0 rgba(0, 0, 0, 0.45),
+        0 12px 28px rgba(0, 0, 0, 0.6);
+    }
+
+    .logo-sub {
+      display: block;
+
+      margin-top: 4px;
+
+      color: rgba(199, 207, 225, 0.72);
+
+      font-size: clamp(13px, 1.8vw, 22px);
+      font-weight: 600;
+
+      letter-spacing: clamp(8px, 1.5vw, 18px);
+    }
+
+    @keyframes logoFadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #loading-status {
+      width: 100%;
+
+      opacity: 1;
+
+      transition:
+        opacity 0.35s ease,
+        transform 0.35s ease;
+    }
+
+    #loading-status.hidden {
+      opacity: 0;
+      transform: translateY(-8px);
+      pointer-events: none;
+    }
+
+    .loading-text {
+      margin-bottom: 12px;
+
+      display: flex;
+      justify-content: space-between;
+
+      color: rgba(255, 255, 255, 0.78);
+
+      font-size: clamp(13px, 1.8vw, 18px);
+      letter-spacing: 1px;
+    }
+
+    #progress-track {
+      position: relative;
+
+      width: 100%;
+      height: clamp(12px, 1.7vw, 18px);
+
+      overflow: hidden;
+
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+
+      background: rgba(0, 0, 0, 0.36);
+    }
+
+    #progress-bar {
+      width: 0%;
+      height: 100%;
+
+      border-radius: inherit;
+
+      background:
+        linear-gradient(
+          90deg,
+          #6f7f9e,
+          #b6c0d4,
+          #7585a4
+        );
+
+      box-shadow:
+        0 0 16px rgba(178, 193, 219, 0.38);
+
+      transition: width 0.12s linear;
+    }
+
+    #progress-bar::after {
+      content: "";
+
+      display: block;
+
+      width: 120px;
+      height: 100%;
+
+      background:
+        linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.55),
+          transparent
+        );
+
+      animation: loadingShine 1.2s linear infinite;
+    }
+
+    @keyframes loadingShine {
+      from {
+        transform: translateX(-130px);
+      }
+
+      to {
+        transform: translateX(600px);
+      }
+    }
+
+    #enter-dungeon-button {
+      position: absolute;
+      top: calc(100% - 72px);
+
+      min-width: 230px;
+
+      padding: 15px 34px;
+
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      border-radius: 7px;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(104, 119, 149, 0.95),
+          rgba(48, 58, 80, 0.98)
+        );
+
+      color: #ffffff;
+
+      font-size: clamp(17px, 2.2vw, 24px);
+      font-weight: 700;
+
+      letter-spacing: 3px;
+
+      cursor: pointer;
+
+      opacity: 0;
+      visibility: hidden;
+
+      transform: translateY(14px);
+
+      box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.42);
+
+      transition:
+        opacity 0.6s ease,
+        transform 0.6s ease,
+        border-color 0.2s ease,
+        background 0.2s ease;
+    }
+
+    #enter-dungeon-button.visible {
+      opacity: 1;
+      visibility: visible;
+
+      transform: translateY(0);
+    }
+
+    #enter-dungeon-button:hover {
+      border-color: rgba(255, 255, 255, 0.78);
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(123, 140, 173, 0.98),
+          rgba(59, 70, 95, 1)
+        );
+    }
+
+    #enter-dungeon-button:active {
+      transform: scale(0.96);
+    }
+
+    /* ==================================================
+       遊戲 HUD
+    ================================================== */
 
     #desktop-help {
       position: absolute;
@@ -113,12 +533,13 @@
       font-size: 15px;
       white-space: nowrap;
 
+      opacity: 0;
+      visibility: hidden;
+
+      transition: opacity 0.4s ease;
+
       pointer-events: none;
     }
-
-    /* =========================
-       攻擊鍵設定
-    ========================= */
 
     #keyboard-settings {
       position: absolute;
@@ -139,10 +560,16 @@
       color: #ffffff;
 
       font-size: 14px;
+
+      opacity: 0;
+      visibility: hidden;
+
+      transition: opacity 0.4s ease;
     }
 
     #attack-key-select {
       min-width: 58px;
+
       padding: 5px 8px;
 
       border: 1px solid rgba(255, 255, 255, 0.3);
@@ -151,32 +578,45 @@
       background: #1a202b;
       color: #ffffff;
 
-      font-size: 14px;
       cursor: pointer;
     }
 
-    /* =========================
-       手機觸控控制
-    ========================= */
+    body.game-started #desktop-help,
+    body.game-started #keyboard-settings {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ==================================================
+       手機虛擬控制
+    ================================================== */
 
     #touch-controls {
       position: absolute;
       inset: 0;
       z-index: 30;
 
+      opacity: 0;
+      visibility: hidden;
+
+      transition: opacity 0.4s ease;
+
       pointer-events: none;
     }
 
-    /* 縮小後的搖桿 */
+    body.game-started #touch-controls {
+      opacity: 1;
+      visibility: visible;
+    }
 
     #joystick-zone {
       position: absolute;
 
-      left: max(18px, env(safe-area-inset-left));
-      bottom: max(18px, env(safe-area-inset-bottom));
+      left: max(28px, env(safe-area-inset-left));
+      bottom: max(28px, env(safe-area-inset-bottom));
 
-      width: clamp(92px, 13vw, 135px);
-      height: clamp(92px, 13vw, 135px);
+      width: clamp(150px, 19vw, 220px);
+      height: clamp(150px, 19vw, 220px);
 
       display: flex;
       align-items: center;
@@ -192,14 +632,14 @@
       width: 100%;
       height: 100%;
 
-      border: 2px solid rgba(255, 255, 255, 0.25);
+      border: 3px solid rgba(255, 255, 255, 0.25);
       border-radius: 50%;
 
       background: rgba(8, 11, 18, 0.43);
 
       box-shadow:
-        inset 0 0 20px rgba(255, 255, 255, 0.04),
-        0 6px 16px rgba(0, 0, 0, 0.25);
+        inset 0 0 28px rgba(255, 255, 255, 0.04),
+        0 8px 20px rgba(0, 0, 0, 0.25);
 
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
@@ -208,8 +648,11 @@
     #joystick-base::before,
     #joystick-base::after {
       content: "";
+
       position: absolute;
+
       background: rgba(255, 255, 255, 0.1);
+
       pointer-events: none;
     }
 
@@ -217,7 +660,8 @@
       top: 50%;
       left: 15%;
       right: 15%;
-      height: 1px;
+
+      height: 2px;
 
       transform: translateY(-50%);
     }
@@ -226,27 +670,30 @@
       left: 50%;
       top: 15%;
       bottom: 15%;
-      width: 1px;
+
+      width: 2px;
 
       transform: translateX(-50%);
     }
 
     #joystick-stick {
       position: absolute;
+
       left: 50%;
       top: 50%;
 
-      width: 44%;
-      height: 44%;
+      width: 48%;
+      height: 48%;
 
-      border: 2px solid rgba(255, 255, 255, 0.5);
+      border: 3px solid rgba(255, 255, 255, 0.5);
       border-radius: 50%;
 
       background: rgba(255, 255, 255, 0.17);
 
       transform: translate(-50%, -50%);
 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+      box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.28);
 
       pointer-events: none;
     }
@@ -256,41 +703,39 @@
       border-color: rgba(255, 255, 255, 0.75);
     }
 
-    /* =========================
-       手機動作按鈕
-    ========================= */
-
     #action-controls {
       position: absolute;
 
-      right: max(18px, env(safe-area-inset-right));
-      bottom: max(18px, env(safe-area-inset-bottom));
+      right: max(30px, env(safe-area-inset-right));
+      bottom: max(30px, env(safe-area-inset-bottom));
 
       display: flex;
       align-items: flex-end;
-      gap: clamp(12px, 1.6vw, 20px);
+
+      gap: clamp(16px, 2vw, 28px);
 
       pointer-events: auto;
     }
 
     .action-button {
-      width: clamp(58px, 7.5vw, 82px);
-      height: clamp(58px, 7.5vw, 82px);
+      width: clamp(70px, 9vw, 108px);
+      height: clamp(70px, 9vw, 108px);
 
       display: flex;
       align-items: center;
       justify-content: center;
 
-      border: 2px solid rgba(255, 255, 255, 0.42);
+      border: 3px solid rgba(255, 255, 255, 0.42);
       border-radius: 50%;
 
       background: rgba(8, 11, 18, 0.55);
       color: #ffffff;
 
-      font-size: clamp(15px, 1.8vw, 21px);
+      font-size: clamp(18px, 2.2vw, 28px);
       font-weight: 700;
 
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      box-shadow:
+        0 7px 20px rgba(0, 0, 0, 0.3);
 
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
@@ -300,27 +745,24 @@
 
     .action-button.active {
       transform: scale(0.9);
+
       background: rgba(255, 255, 255, 0.25);
       border-color: rgba(255, 255, 255, 0.8);
     }
 
     #jump-button {
-      margin-bottom: clamp(30px, 4vw, 52px);
+      margin-bottom: clamp(38px, 5vw, 68px);
     }
 
-    /* =========================
-       電腦版隱藏手機控制
-    ========================= */
+    /* ==================================================
+       裝置判斷
+    ================================================== */
 
     @media (hover: hover) and (pointer: fine) {
       #touch-controls {
         display: none;
       }
     }
-
-    /* =========================
-       手機版隱藏電腦資訊
-    ========================= */
 
     @media (hover: none), (pointer: coarse) {
       #desktop-help,
@@ -336,27 +778,18 @@
       }
     }
 
-    /* =========================
-       手機直向提示
-    ========================= */
-
     @media (orientation: portrait) and (hover: none) {
-      #game-wrapper::after {
-        content: "請將手機旋轉為橫向";
-
-        position: absolute;
-        inset: 0;
-        z-index: 200;
-
+      #orientation-screen {
         display: flex;
-        align-items: center;
-        justify-content: center;
+      }
+    }
 
-        background: #090c12;
-        color: #ffffff;
-
-        font-size: 24px;
-        font-weight: 700;
+    @media (prefers-reduced-motion: reduce) {
+      .orientation-content,
+      .phone-rotate-icon,
+      #loading-page::before,
+      #progress-bar::after {
+        animation: none;
       }
     }
   </style>
@@ -371,15 +804,77 @@
       tabindex="0"
     ></canvas>
 
-    <div id="loading-screen">
-      角色素材讀取中...
-    </div>
+    <!-- 手機直向提示 -->
+    <section
+      id="orientation-screen"
+      aria-label="請旋轉手機"
+    >
+      <div class="orientation-content">
+        <div
+          class="phone-rotate-icon"
+          aria-hidden="true"
+        ></div>
 
+        <div>
+          <div class="orientation-title">
+            請將手機轉為橫向
+          </div>
+
+          <div class="orientation-subtitle">
+            橫向模式可獲得最佳遊戲體驗
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading Page -->
+    <section
+      id="loading-page"
+      aria-label="遊戲載入畫面"
+    >
+      <div class="loading-content">
+        <div class="game-logo">
+          <span class="logo-main">
+            HOODED
+          </span>
+
+          <span class="logo-sub">
+            ESCAPE
+          </span>
+        </div>
+
+        <div id="loading-status">
+          <div class="loading-text">
+            <span id="loading-message">
+              正在開啟地下城入口……
+            </span>
+
+            <span id="progress-number">
+              0%
+            </span>
+          </div>
+
+          <div id="progress-track">
+            <div id="progress-bar"></div>
+          </div>
+        </div>
+
+        <button
+          id="enter-dungeon-button"
+          type="button"
+        >
+          進入地下城
+        </button>
+      </div>
+    </section>
+
+    <!-- 電腦版操作提示 -->
     <div id="desktop-help">
-      A／D 或方向鍵移動｜Space 跳躍｜S 蹲下｜Shift 跑步｜攻擊鍵：
+      方向鍵移動｜↑ 跳躍｜↓ 蹲下｜Shift 跑步｜攻擊：
       <span id="attack-key-label">Z</span>
     </div>
 
+    <!-- 電腦版攻擊鍵設定 -->
     <div id="keyboard-settings">
       <label for="attack-key-select">
         攻擊鍵
@@ -396,6 +891,7 @@
       </select>
     </div>
 
+    <!-- 手機版控制 -->
     <div id="touch-controls">
       <div id="joystick-zone">
         <div id="joystick-base">
@@ -430,9 +926,9 @@
   <script>
     "use strict";
 
-    /* =========================
-       Canvas
-    ========================= */
+    /* ==================================================
+       DOM
+    ================================================== */
 
     const canvas =
       document.getElementById("game-canvas");
@@ -440,17 +936,38 @@
     const context =
       canvas.getContext("2d");
 
-    const loadingScreen =
-      document.getElementById("loading-screen");
+    const loadingPage =
+      document.getElementById("loading-page");
+
+    const loadingStatus =
+      document.getElementById("loading-status");
+
+    const loadingMessage =
+      document.getElementById("loading-message");
+
+    const progressBar =
+      document.getElementById("progress-bar");
+
+    const progressNumber =
+      document.getElementById("progress-number");
+
+    const enterDungeonButton =
+      document.getElementById("enter-dungeon-button");
+
+    const attackKeySelect =
+      document.getElementById("attack-key-select");
+
+    const attackKeyLabel =
+      document.getElementById("attack-key-label");
 
     context.imageSmoothingEnabled = false;
 
+    /* ==================================================
+       遊戲常數
+    ================================================== */
+
     const GAME_WIDTH = 1280;
     const GAME_HEIGHT = 720;
-
-    /* =========================
-       遊戲設定
-    ========================= */
 
     const GROUND_Y = 615;
 
@@ -459,19 +976,28 @@
     const RUN_SPEED = 420;
     const JUMP_FORCE = 820;
 
-    /*
-      原本為 2.2。
-      現在改成 3.2，讓角色在手機畫面更明顯。
-    */
-    const PLAYER_SCALE = 3.2;
+    const PLAYER_SCALE = 2.2;
 
     const JOYSTICK_DEAD_ZONE = 0.14;
     const RUN_THRESHOLD = 0.72;
     const DUCK_THRESHOLD = 0.62;
 
-    /* =========================
+    const FAKE_LOADING_MIN_TIME = 2600;
+
+    /* ==================================================
+       遊戲狀態
+    ================================================== */
+
+    let assetsLoaded = false;
+    let fakeLoadingCompleted = false;
+    let gameStarted = false;
+    let gameLoopStarted = false;
+
+    let previousTime = performance.now();
+
+    /* ==================================================
        攻擊鍵設定
-    ========================= */
+    ================================================== */
 
     const ATTACK_KEY_STORAGE =
       "hoodedCharacterAttackKey";
@@ -486,16 +1012,6 @@
       KeyL: "L"
     };
 
-    const attackKeySelect =
-      document.getElementById(
-        "attack-key-select"
-      );
-
-    const attackKeyLabel =
-      document.getElementById(
-        "attack-key-label"
-      );
-
     let attackKeyCode =
       localStorage.getItem(
         ATTACK_KEY_STORAGE
@@ -506,7 +1022,6 @@
     }
 
     attackKeySelect.value = attackKeyCode;
-
     attackKeyLabel.textContent =
       allowedAttackKeys[attackKeyCode];
 
@@ -529,9 +1044,9 @@
       }
     );
 
-    /* =========================
+    /* ==================================================
        動畫設定
-    ========================= */
+    ================================================== */
 
     const animationDefinitions = {
       idle: {
@@ -585,9 +1100,9 @@
 
     const animations = {};
 
-    /* =========================
+    /* ==================================================
        輸入狀態
-    ========================= */
+    ================================================== */
 
     const input = {
       left: false,
@@ -616,23 +1131,19 @@
       magnitude: 0
     };
 
-    /* =========================
+    /* ==================================================
        玩家
-    ========================= */
+    ================================================== */
 
     const player = {
-      x: 220,
+      x: 200,
       y: GROUND_Y,
 
       velocityX: 0,
       velocityY: 0,
 
-      /*
-        這是移動邊界與邏輯尺寸，
-        不會直接決定圖片繪製大小。
-      */
-      width: 150,
-      height: 190,
+      width: 120,
+      height: 120,
 
       facing: 1,
 
@@ -645,12 +1156,9 @@
       frameTimer: 0
     };
 
-    let assetsLoaded = false;
-    let previousTime = performance.now();
-
-    /* =========================
+    /* ==================================================
        素材載入
-    ========================= */
+    ================================================== */
 
     function padNumber(number) {
       return String(number).padStart(2, "0");
@@ -712,8 +1220,7 @@
 
         for (
           let frameNumber = 1;
-          frameNumber <=
-            definition.frameCount;
+          frameNumber <= definition.frameCount;
           frameNumber += 1
         ) {
           const path =
@@ -739,9 +1246,160 @@
       await Promise.all(loadingTasks);
     }
 
-    /* =========================
+    /* ==================================================
+       假讀取進度
+    ================================================== */
+
+    function updateLoadingText(progress) {
+      if (progress < 28) {
+        loadingMessage.textContent =
+          "正在確認地下城入口……";
+      } else if (progress < 56) {
+        loadingMessage.textContent =
+          "正在喚醒兜帽旅人……";
+      } else if (progress < 82) {
+        loadingMessage.textContent =
+          "正在準備冒險裝備……";
+      } else if (progress < 100) {
+        loadingMessage.textContent =
+          "正在解除入口封印……";
+      } else {
+        loadingMessage.textContent =
+          "地下城入口已開啟";
+      }
+    }
+
+    function runFakeLoading() {
+      return new Promise((resolve) => {
+        const startTime =
+          performance.now();
+
+        let displayedProgress = 0;
+
+        function update(currentTime) {
+          const elapsed =
+            currentTime - startTime;
+
+          const normalized =
+            Math.min(
+              elapsed /
+                FAKE_LOADING_MIN_TIME,
+              1
+            );
+
+          const eased =
+            1 -
+            Math.pow(
+              1 - normalized,
+              2.4
+            );
+
+          const targetProgress =
+            Math.floor(eased * 100);
+
+          displayedProgress =
+            Math.max(
+              displayedProgress,
+              targetProgress
+            );
+
+          progressBar.style.width =
+            `${displayedProgress}%`;
+
+          progressNumber.textContent =
+            `${displayedProgress}%`;
+
+          updateLoadingText(
+            displayedProgress
+          );
+
+          if (normalized < 1) {
+            requestAnimationFrame(
+              update
+            );
+          } else {
+            fakeLoadingCompleted = true;
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(update);
+      });
+    }
+
+    function revealEnterButton() {
+      if (
+        !assetsLoaded ||
+        !fakeLoadingCompleted
+      ) {
+        return;
+      }
+
+      progressBar.style.width = "100%";
+      progressNumber.textContent = "100%";
+
+      updateLoadingText(100);
+
+      setTimeout(() => {
+        loadingStatus.classList.add(
+          "hidden"
+        );
+
+        setTimeout(() => {
+          enterDungeonButton.classList.add(
+            "visible"
+          );
+        }, 220);
+      }, 350);
+    }
+
+    /* ==================================================
+       開始遊戲
+    ================================================== */
+
+    function startGame() {
+      if (
+        gameStarted ||
+        !assetsLoaded ||
+        !fakeLoadingCompleted
+      ) {
+        return;
+      }
+
+      gameStarted = true;
+
+      resetAllInputs();
+
+      loadingPage.classList.add(
+        "hidden"
+      );
+
+      document.body.classList.add(
+        "game-started"
+      );
+
+      canvas.focus();
+
+      setTimeout(() => {
+        updateJoystickCenter();
+      }, 50);
+    }
+
+    enterDungeonButton.addEventListener(
+      "click",
+      startGame
+    );
+
+    enterDungeonButton.addEventListener(
+      "pointerdown",
+      (event) => {
+        event.stopPropagation();
+      }
+    );
+
+    /* ==================================================
        動畫控制
-    ========================= */
+    ================================================== */
 
     function setAnimation(
       animationName,
@@ -752,10 +1410,13 @@
       }
 
       if (
-        player.animation !== animationName ||
+        player.animation !==
+          animationName ||
         restart
       ) {
-        player.animation = animationName;
+        player.animation =
+          animationName;
+
         player.frameIndex = 0;
         player.frameTimer = 0;
       }
@@ -772,10 +1433,6 @@
         return;
       }
 
-      /*
-        Jump 動畫依照垂直速度決定幀數，
-        讓上升、最高點與下降對應不同畫面。
-      */
       if (player.animation === "jump") {
         const lastFrame =
           animation.frames.length - 1;
@@ -853,12 +1510,13 @@
       }
     }
 
-    /* =========================
-       玩家操作
-    ========================= */
+    /* ==================================================
+       玩家控制
+    ================================================== */
 
     function triggerJump() {
       if (
+        !gameStarted ||
         !player.grounded ||
         player.attacking ||
         player.ducking
@@ -868,13 +1526,17 @@
 
       player.grounded = false;
       player.ducking = false;
+
       player.velocityY = -JUMP_FORCE;
 
       setAnimation("jump", true);
     }
 
     function triggerAttack() {
-      if (player.attacking) {
+      if (
+        !gameStarted ||
+        player.attacking
+      ) {
         return;
       }
 
@@ -910,7 +1572,8 @@
       ) {
         const shouldRun =
           input.run ||
-          analogStrength >= RUN_THRESHOLD;
+          analogStrength >=
+            RUN_THRESHOLD;
 
         setAnimation(
           shouldRun
@@ -925,6 +1588,11 @@
     }
 
     function updatePlayer(deltaTime) {
+      if (!gameStarted) {
+        updateAnimation(deltaTime);
+        return;
+      }
+
       if (pressed.jump) {
         triggerJump();
         pressed.jump = false;
@@ -952,7 +1620,8 @@
 
       const joystickDucking =
         joystick.active &&
-        joystick.y > DUCK_THRESHOLD &&
+        joystick.y >
+          DUCK_THRESHOLD &&
         Math.abs(joystick.x) < 0.55;
 
       player.ducking =
@@ -970,7 +1639,8 @@
         if (
           Math.abs(
             horizontalDirection
-          ) > JOYSTICK_DEAD_ZONE
+          ) >
+          JOYSTICK_DEAD_ZONE
         ) {
           const shouldRun =
             input.run ||
@@ -1012,7 +1682,7 @@
         deltaTime;
 
       const boundary =
-        player.width * 0.38;
+        player.width * 0.35;
 
       player.x = Math.max(
         boundary,
@@ -1036,9 +1706,9 @@
       updateAnimation(deltaTime);
     }
 
-    /* =========================
-       背景繪製
-    ========================= */
+    /* ==================================================
+       畫面繪製
+    ================================================== */
 
     function drawBackground() {
       const gradient =
@@ -1068,28 +1738,6 @@
         GAME_HEIGHT
       );
 
-      /*
-        遠景裝飾。
-      */
-      context.fillStyle =
-        "rgba(255, 255, 255, 0.025)";
-
-      for (
-        let x = 0;
-        x < GAME_WIDTH;
-        x += 160
-      ) {
-        context.fillRect(
-          x,
-          145,
-          90,
-          GROUND_Y - 145
-        );
-      }
-
-      /*
-        地面。
-      */
       context.fillStyle = "#303846";
 
       context.fillRect(
@@ -1107,37 +1755,37 @@
         GAME_WIDTH,
         5
       );
+
+      context.fillStyle =
+        "rgba(255, 255, 255, 0.06)";
+
+      for (
+        let x = 0;
+        x < GAME_WIDTH;
+        x += 84
+      ) {
+        context.fillRect(
+          x,
+          GROUND_Y + 38,
+          48,
+          4
+        );
+      }
     }
 
     function drawPlayerShadow() {
-      const airDistance =
-        Math.max(
-          0,
-          GROUND_Y - player.y
-        );
-
-      const shadowScale =
-        Math.max(
-          0.45,
-          1 - airDistance / 500
-        );
-
       context.save();
 
-      context.globalAlpha =
-        player.grounded
-          ? 0.28
-          : 0.18;
-
+      context.globalAlpha = 0.25;
       context.fillStyle = "#000000";
 
       context.beginPath();
 
       context.ellipse(
         player.x,
-        GROUND_Y + 7,
-        58 * shadowScale,
-        13 * shadowScale,
+        GROUND_Y + 5,
+        42,
+        10,
         0,
         0,
         Math.PI * 2
@@ -1192,25 +1840,18 @@
 
       context.drawImage(
         frame,
-
         Math.round(
           -drawWidth / 2
         ),
-
         Math.round(
           -drawHeight
         ),
-
         Math.round(drawWidth),
         Math.round(drawHeight)
       );
 
       context.restore();
     }
-
-    /* =========================
-       狀態顯示
-    ========================= */
 
     function getStatusText() {
       const statusNames = {
@@ -1225,11 +1866,16 @@
       return (
         statusNames[
           player.animation
-        ] || player.animation
+        ] ||
+        player.animation
       );
     }
 
     function drawStatus() {
+      if (!gameStarted) {
+        return;
+      }
+
       context.save();
 
       context.fillStyle =
@@ -1285,9 +1931,9 @@
       drawStatus();
     }
 
-    /* =========================
-       鍵盤操作
-    ========================= */
+    /* ==================================================
+       鍵盤輸入
+    ================================================== */
 
     function getControlFromKey(code) {
       if (code === attackKeyCode) {
@@ -1302,8 +1948,8 @@
         KeyD: "right",
 
         ArrowUp: "jump",
-        Space: "jump",
         KeyW: "jump",
+        Space: "jump",
 
         ArrowDown: "duck",
         KeyS: "duck",
@@ -1312,7 +1958,10 @@
         ShiftRight: "run"
       };
 
-      return keyBindings[code] || null;
+      return (
+        keyBindings[code] ||
+        null
+      );
     }
 
     function setControl(
@@ -1342,8 +1991,9 @@
       "keydown",
       (event) => {
         if (
+          !gameStarted ||
           document.activeElement ===
-          attackKeySelect
+            attackKeySelect
         ) {
           return;
         }
@@ -1391,9 +2041,9 @@
       }
     );
 
-    /* =========================
+    /* ==================================================
        虛擬搖桿
-    ========================= */
+    ================================================== */
 
     const joystickZone =
       document.getElementById(
@@ -1523,12 +2173,15 @@
     joystickZone.addEventListener(
       "pointerdown",
       (event) => {
+        if (!gameStarted) {
+          return;
+        }
+
         event.preventDefault();
 
         updateJoystickCenter();
 
         joystick.active = true;
-
         joystick.pointerId =
           event.pointerId;
 
@@ -1555,6 +2208,7 @@
       "pointermove",
       (event) => {
         if (
+          !gameStarted ||
           !joystick.active ||
           event.pointerId !==
             joystick.pointerId
@@ -1596,9 +2250,9 @@
       resetJoystick
     );
 
-    /* =========================
-       手機動作按鈕
-    ========================= */
+    /* ==================================================
+       手機動作鍵
+    ================================================== */
 
     document
       .querySelectorAll(
@@ -1609,6 +2263,10 @@
           button.dataset.control;
 
         function activate(event) {
+          if (!gameStarted) {
+            return;
+          }
+
           event.preventDefault();
 
           const isNewPress =
@@ -1674,9 +2332,9 @@
         );
       });
 
-    /* =========================
+    /* ==================================================
        重置輸入
-    ========================= */
+    ================================================== */
 
     function resetAllInputs() {
       for (
@@ -1695,13 +2353,11 @@
         .querySelectorAll(
           ".action-button"
         )
-        .forEach(
-          (button) => {
-            button.classList.remove(
-              "active"
-            );
-          }
-        );
+        .forEach((button) => {
+          button.classList.remove(
+            "active"
+          );
+        });
     }
 
     window.addEventListener(
@@ -1720,12 +2376,25 @@
 
     window.addEventListener(
       "resize",
-      updateJoystickCenter
+      () => {
+        updateJoystickCenter();
+      }
     );
 
-    /* =========================
+    window.addEventListener(
+      "orientationchange",
+      () => {
+        resetAllInputs();
+
+        setTimeout(() => {
+          updateJoystickCenter();
+        }, 250);
+      }
+    );
+
+    /* ==================================================
        遊戲循環
-    ========================= */
+    ================================================== */
 
     function gameLoop(currentTime) {
       const rawDeltaTime =
@@ -1740,7 +2409,8 @@
           1 / 30
         );
 
-      previousTime = currentTime;
+      previousTime =
+        currentTime;
 
       if (assetsLoaded) {
         updatePlayer(deltaTime);
@@ -1752,34 +2422,46 @@
       );
     }
 
-    /* =========================
+    /* ==================================================
        初始化
-    ========================= */
+    ================================================== */
 
     async function initializeGame() {
-      try {
-        await loadAnimations();
-
-        assetsLoaded = true;
-
-        loadingScreen.style.display =
-          "none";
-
-        updateJoystickCenter();
-
-        previousTime =
-          performance.now();
-
-        canvas.focus();
+      if (!gameLoopStarted) {
+        gameLoopStarted = true;
 
         requestAnimationFrame(
           gameLoop
         );
+      }
+
+      try {
+        const [
+          animationResult
+        ] = await Promise.all([
+          loadAnimations(),
+          runFakeLoading()
+        ]);
+
+        void animationResult;
+
+        assetsLoaded = true;
+
+        revealEnterButton();
       } catch (error) {
         console.error(error);
 
-        loadingScreen.textContent =
-          "素材載入失敗，請檢查圖片路徑與檔名大小寫。";
+        loadingMessage.textContent =
+          "素材載入失敗，請檢查圖片路徑";
+
+        progressNumber.textContent =
+          "錯誤";
+
+        progressBar.style.width =
+          "100%";
+
+        progressBar.style.background =
+          "#944b4b";
       }
     }
 

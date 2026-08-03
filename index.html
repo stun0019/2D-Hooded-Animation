@@ -74,6 +74,8 @@
       width: 100%;
       height: 100%;
 
+      background: #111722;
+
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
@@ -1002,7 +1004,7 @@
     context.imageSmoothingEnabled = false;
 
     /* ==================================================
-       畫面與世界設定
+       畫面與世界
     ================================================== */
 
     const VIEW_WIDTH = 1280;
@@ -1019,14 +1021,28 @@
     const JUMP_FORCE = 820;
 
     const PLAYER_SCALE = 2.6;
+    const ENEMY_SCALE = 1.4;
+
+    const CAMERA_FOLLOW_SPEED = 5.5;
 
     const JOYSTICK_DEAD_ZONE = 0.14;
     const RUN_THRESHOLD = 0.72;
     const DUCK_THRESHOLD = 0.62;
 
-    const CAMERA_FOLLOW_SPEED = 5.5;
-
     const ORIENTATION_FADE_TIME = 650;
+
+    /* ==================================================
+       ORC1 AI 設定
+    ================================================== */
+
+    const ORC_PATROL_SPEED = 72;
+    const ORC_CHASE_SPEED = 112;
+
+    const ORC_DETECTION_RANGE = 390;
+    const ORC_ATTACK_RANGE = 92;
+
+    const ORC_ATTACK_COOLDOWN = 1.1;
+    const ORC_PATROL_WAIT_TIME = 1.0;
 
     /* ==================================================
        遊戲狀態
@@ -1080,6 +1096,35 @@
     };
 
     /* ==================================================
+       ORC1 敵人
+    ================================================== */
+
+    const orc = {
+      x: 1100,
+      y: WORLD_GROUND_Y,
+
+      velocityX: 0,
+
+      facing: -1,
+
+      animation: "idle",
+
+      frameIndex: 0,
+      frameTimer: 0,
+
+      state: "patrol",
+
+      attacking: false,
+      attackCooldown: 0,
+
+      patrolMinX: 850,
+      patrolMaxX: 1500,
+
+      patrolDirection: -1,
+      patrolWaitTimer: 0
+    };
+
+    /* ==================================================
        輸入
     ================================================== */
 
@@ -1111,10 +1156,10 @@
     };
 
     /* ==================================================
-       動畫設定
+       玩家動畫設定
     ================================================== */
 
-    const animationDefinitions = {
+    const playerAnimationDefinitions = {
       idle: {
         folder: "Idle",
         prefix: "idle",
@@ -1164,10 +1209,41 @@
       }
     };
 
-    const animations = {};
+    /* ==================================================
+       ORC1 動畫設定
+    ================================================== */
+
+    const enemyAnimationDefinitions = {
+      idle: {
+        folder: "Idle",
+        prefix: "Idle",
+        frameCount: 4,
+        frameDuration: 0.19,
+        loop: true
+      },
+
+      walk: {
+        folder: "Walk",
+        prefix: "Walk",
+        frameCount: 6,
+        frameDuration: 0.12,
+        loop: true
+      },
+
+      attack: {
+        folder: "ATK",
+        prefix: "ATK",
+        frameCount: 8,
+        frameDuration: 0.085,
+        loop: false
+      }
+    };
+
+    const playerAnimations = {};
+    const enemyAnimations = {};
 
     /* ==================================================
-       工具函式
+       工具
     ================================================== */
 
     function clamp(value, minimum, maximum) {
@@ -1179,7 +1255,10 @@
 
     function wait(milliseconds) {
       return new Promise((resolve) => {
-        window.setTimeout(resolve, milliseconds);
+        window.setTimeout(
+          resolve,
+          milliseconds
+        );
       });
     }
 
@@ -1193,17 +1272,39 @@
 
     function isTouchDevice() {
       return (
-        window.matchMedia("(pointer: coarse)").matches ||
-        window.matchMedia("(hover: none)").matches
+        window.matchMedia(
+          "(pointer: coarse)"
+        ).matches ||
+        window.matchMedia(
+          "(hover: none)"
+        ).matches
       );
     }
 
     function isPortrait() {
-      return window.innerHeight > window.innerWidth;
+      return (
+        window.innerHeight >
+        window.innerWidth
+      );
+    }
+
+    function padNumber(number) {
+      return String(number).padStart(
+        2,
+        "0"
+      );
+    }
+
+    function worldToScreenX(worldX) {
+      return worldX - camera.x;
+    }
+
+    function worldToScreenY(worldY) {
+      return worldY - camera.y;
     }
 
     /* ==================================================
-       攻擊鍵
+       攻擊鍵設定
     ================================================== */
 
     const ATTACK_KEY_STORAGE =
@@ -1258,24 +1359,6 @@
        圖片載入
     ================================================== */
 
-    function padNumber(number) {
-      return String(number).padStart(2, "0");
-    }
-
-    function createFramePath(
-      definition,
-      frameNumber
-    ) {
-      return (
-        "2D_Character/" +
-        definition.folder +
-        "/" +
-        definition.prefix +
-        padNumber(frameNumber) +
-        ".png"
-      );
-    }
-
     function loadImage(path) {
       return new Promise(
         (resolve, reject) => {
@@ -1298,21 +1381,25 @@
       );
     }
 
-    async function loadAnimations() {
+    async function loadAnimationGroup(
+      destination,
+      definitions,
+      basePath
+    ) {
       const tasks = [];
 
       for (
         const [
           animationName,
           definition
-        ] of Object.entries(
-          animationDefinitions
-        )
+        ] of Object.entries(definitions)
       ) {
-        animations[animationName] = {
+        destination[animationName] = {
           frames: [],
+
           frameDuration:
             definition.frameDuration,
+
           loop:
             definition.loop
         };
@@ -1323,15 +1410,18 @@
           frameNumber += 1
         ) {
           const path =
-            createFramePath(
-              definition,
-              frameNumber
-            );
+            basePath +
+            "/" +
+            definition.folder +
+            "/" +
+            definition.prefix +
+            padNumber(frameNumber) +
+            ".png";
 
           tasks.push(
             loadImage(path).then(
               (image) => {
-                animations[
+                destination[
                   animationName
                 ].frames[
                   frameNumber - 1
@@ -1343,6 +1433,22 @@
       }
 
       await Promise.all(tasks);
+    }
+
+    async function loadAllAnimations() {
+      await Promise.all([
+        loadAnimationGroup(
+          playerAnimations,
+          playerAnimationDefinitions,
+          "2D_Character"
+        ),
+
+        loadAnimationGroup(
+          enemyAnimations,
+          enemyAnimationDefinitions,
+          "2D_Enemy/ORC1"
+        )
+      ]);
     }
 
     /* ==================================================
@@ -1397,7 +1503,9 @@
 
           const progress =
             start +
-            (end - start) *
+            (
+              end - start
+            ) *
             easedRatio;
 
           setLoadingProgress(
@@ -1424,27 +1532,36 @@
 
       await animateProgress(
         0,
-        35,
-        900,
+        30,
+        850,
         "正在確認地下城入口……"
       );
 
-      await wait(160);
+      await wait(150);
 
       await animateProgress(
-        35,
-        70,
-        1050,
+        30,
+        62,
+        950,
         "正在喚醒兜帽旅人……"
       );
 
-      await wait(180);
+      await wait(150);
 
       await animateProgress(
-        70,
+        62,
+        82,
+        850,
+        "正在載入地下城生物……"
+      );
+
+      await wait(150);
+
+      await animateProgress(
+        82,
         90,
-        1150,
-        "正在載入地下城區域……"
+        700,
+        "正在喚醒獸人守衛……"
       );
 
       setLoadingProgress(
@@ -1509,7 +1626,7 @@
 
       try {
         await Promise.all([
-          loadAnimations().then(() => {
+          loadAllAnimations().then(() => {
             assetsLoaded = true;
           }),
 
@@ -1521,7 +1638,7 @@
         console.error(error);
 
         loadingMessage.textContent =
-          "素材載入失敗，請檢查圖片路徑";
+          "素材載入失敗，請檢查圖片路徑與大小寫";
 
         progressNumber.textContent =
           "錯誤";
@@ -1535,7 +1652,7 @@
     }
 
     /* ==================================================
-       直向提示
+       手機方向提示
     ================================================== */
 
     function showOrientationScreen() {
@@ -1628,7 +1745,6 @@
       gameStarted = true;
 
       resetAllInputs();
-
       snapCameraToPlayer();
 
       loadingPage.classList.add(
@@ -1655,11 +1771,11 @@
        玩家動畫
     ================================================== */
 
-    function setAnimation(
+    function setPlayerAnimation(
       animationName,
       restart = false
     ) {
-      if (!animations[animationName]) {
+      if (!playerAnimations[animationName]) {
         return;
       }
 
@@ -1675,9 +1791,11 @@
       }
     }
 
-    function updateAnimation(deltaTime) {
+    function updatePlayerAnimation(deltaTime) {
       const animation =
-        animations[player.animation];
+        playerAnimations[
+          player.animation
+        ];
 
       if (
         !animation ||
@@ -1749,11 +1867,90 @@
               animation.frames.length - 1;
 
             if (
-              player.animation === "attack"
+              player.animation ===
+              "attack"
             ) {
               player.attacking = false;
 
-              setAnimation(
+              setPlayerAnimation(
+                "idle",
+                true
+              );
+            }
+          }
+        }
+      }
+    }
+
+    /* ==================================================
+       ORC1 動畫
+    ================================================== */
+
+    function setOrcAnimation(
+      animationName,
+      restart = false
+    ) {
+      if (!enemyAnimations[animationName]) {
+        return;
+      }
+
+      if (
+        orc.animation !== animationName ||
+        restart
+      ) {
+        orc.animation =
+          animationName;
+
+        orc.frameIndex = 0;
+        orc.frameTimer = 0;
+      }
+    }
+
+    function updateOrcAnimation(deltaTime) {
+      const animation =
+        enemyAnimations[
+          orc.animation
+        ];
+
+      if (
+        !animation ||
+        animation.frames.length === 0
+      ) {
+        return;
+      }
+
+      orc.frameTimer +=
+        deltaTime;
+
+      while (
+        orc.frameTimer >=
+        animation.frameDuration
+      ) {
+        orc.frameTimer -=
+          animation.frameDuration;
+
+        orc.frameIndex += 1;
+
+        if (
+          orc.frameIndex >=
+          animation.frames.length
+        ) {
+          if (animation.loop) {
+            orc.frameIndex = 0;
+          } else {
+            orc.frameIndex =
+              animation.frames.length - 1;
+
+            if (
+              orc.animation ===
+              "attack"
+            ) {
+              orc.attacking = false;
+
+              orc.attackCooldown =
+                ORC_ATTACK_COOLDOWN;
+
+              setOrcAnimation(
                 "idle",
                 true
               );
@@ -1783,13 +1980,13 @@
       player.velocityY =
         -JUMP_FORCE;
 
-      setAnimation(
+      setPlayerAnimation(
         "jump",
         true
       );
     }
 
-    function triggerAttack() {
+    function triggerPlayerAttack() {
       if (
         !gameStarted ||
         player.attacking
@@ -1802,7 +1999,7 @@
 
       player.velocityX = 0;
 
-      setAnimation(
+      setPlayerAnimation(
         "attack",
         true
       );
@@ -1811,7 +2008,9 @@
     function updatePlayer(deltaTime) {
       if (!gameStarted) {
         if (assetsLoaded) {
-          updateAnimation(deltaTime);
+          updatePlayerAnimation(
+            deltaTime
+          );
         }
 
         return;
@@ -1819,11 +2018,13 @@
 
       if (pressed.jump) {
         triggerJump();
+
         pressed.jump = false;
       }
 
       if (pressed.attack) {
-        triggerAttack();
+        triggerPlayerAttack();
+
         pressed.attack = false;
       }
 
@@ -1846,7 +2047,8 @@
 
       const joystickDucking =
         joystick.active &&
-        joystick.y > DUCK_THRESHOLD &&
+        joystick.y >
+          DUCK_THRESHOLD &&
         Math.abs(joystick.x) < 0.55;
 
       player.ducking =
@@ -1884,7 +2086,7 @@
               ? 1
               : -1;
 
-          setAnimation(
+          setPlayerAnimation(
             shouldRun
               ? "run"
               : "walk"
@@ -1892,13 +2094,13 @@
         } else {
           player.velocityX = 0;
 
-          setAnimation("idle");
+          setPlayerAnimation("idle");
         }
       } else {
         player.velocityX = 0;
 
         if (player.ducking) {
-          setAnimation("duck");
+          setPlayerAnimation("duck");
         }
       }
 
@@ -1907,7 +2109,7 @@
           GRAVITY *
           deltaTime;
 
-        setAnimation("jump");
+        setPlayerAnimation("jump");
       }
 
       player.x +=
@@ -1940,11 +2142,210 @@
         player.velocityY = 0;
       }
 
-      updateAnimation(deltaTime);
+      updatePlayerAnimation(
+        deltaTime
+      );
     }
 
     /* ==================================================
-       相機跟隨
+       ORC1 AI
+    ================================================== */
+
+    function startOrcAttack() {
+      if (
+        orc.attacking ||
+        orc.attackCooldown > 0
+      ) {
+        return;
+      }
+
+      orc.attacking = true;
+      orc.state = "attack";
+      orc.velocityX = 0;
+
+      orc.facing =
+        player.x >= orc.x
+          ? 1
+          : -1;
+
+      setOrcAnimation(
+        "attack",
+        true
+      );
+    }
+
+    function updateOrc(deltaTime) {
+      if (!gameStarted) {
+        if (assetsLoaded) {
+          updateOrcAnimation(
+            deltaTime
+          );
+        }
+
+        return;
+      }
+
+      if (orc.attackCooldown > 0) {
+        orc.attackCooldown =
+          Math.max(
+            0,
+            orc.attackCooldown -
+            deltaTime
+          );
+      }
+
+      /*
+        攻擊動畫播放期間，
+        敵人不能切換成其他動作。
+      */
+      if (orc.attacking) {
+        orc.velocityX = 0;
+
+        updateOrcAnimation(
+          deltaTime
+        );
+
+        return;
+      }
+
+      const differenceX =
+        player.x - orc.x;
+
+      const distanceX =
+        Math.abs(differenceX);
+
+      /*
+        1. 攻擊距離
+      */
+      if (
+        distanceX <=
+        ORC_ATTACK_RANGE
+      ) {
+        orc.state = "attack";
+        orc.velocityX = 0;
+
+        orc.facing =
+          differenceX >= 0
+            ? 1
+            : -1;
+
+        if (orc.attackCooldown <= 0) {
+          startOrcAttack();
+        } else {
+          setOrcAnimation("idle");
+        }
+      }
+
+      /*
+        2. 偵測距離：追蹤玩家
+      */
+      else if (
+        distanceX <=
+        ORC_DETECTION_RANGE
+      ) {
+        orc.state = "chase";
+
+        const direction =
+          differenceX >= 0
+            ? 1
+            : -1;
+
+        orc.facing = direction;
+
+        orc.velocityX =
+          direction *
+          ORC_CHASE_SPEED;
+
+        setOrcAnimation("walk");
+      }
+
+      /*
+        3. 玩家太遠：回到巡邏
+      */
+      else {
+        orc.state = "patrol";
+
+        if (orc.patrolWaitTimer > 0) {
+          orc.patrolWaitTimer =
+            Math.max(
+              0,
+              orc.patrolWaitTimer -
+              deltaTime
+            );
+
+          orc.velocityX = 0;
+
+          setOrcAnimation("idle");
+        } else {
+          orc.velocityX =
+            orc.patrolDirection *
+            ORC_PATROL_SPEED;
+
+          orc.facing =
+            orc.patrolDirection;
+
+          setOrcAnimation("walk");
+        }
+      }
+
+      orc.x +=
+        orc.velocityX *
+        deltaTime;
+
+      /*
+        巡邏範圍只在非追蹤狀態生效。
+      */
+      if (orc.state === "patrol") {
+        if (
+          orc.x <=
+          orc.patrolMinX
+        ) {
+          orc.x =
+            orc.patrolMinX;
+
+          orc.patrolDirection = 1;
+          orc.patrolWaitTimer =
+            ORC_PATROL_WAIT_TIME;
+
+          orc.velocityX = 0;
+
+          setOrcAnimation(
+            "idle",
+            true
+          );
+        } else if (
+          orc.x >=
+          orc.patrolMaxX
+        ) {
+          orc.x =
+            orc.patrolMaxX;
+
+          orc.patrolDirection = -1;
+          orc.patrolWaitTimer =
+            ORC_PATROL_WAIT_TIME;
+
+          orc.velocityX = 0;
+
+          setOrcAnimation(
+            "idle",
+            true
+          );
+        }
+      }
+
+      orc.x = clamp(
+        orc.x,
+        48,
+        WORLD_WIDTH - 48
+      );
+
+      updateOrcAnimation(
+        deltaTime
+      );
+    }
+
+    /* ==================================================
+       相機
     ================================================== */
 
     function calculateCameraTarget() {
@@ -2024,18 +2425,6 @@
         WORLD_HEIGHT -
           VIEW_HEIGHT
       );
-    }
-
-    /* ==================================================
-       世界座標轉畫面座標
-    ================================================== */
-
-    function worldToScreenX(worldX) {
-      return worldX - camera.x;
-    }
-
-    function worldToScreenY(worldY) {
-      return worldY - camera.y;
     }
 
     /* ==================================================
@@ -2145,8 +2534,8 @@
           context.fillRect(
             Math.floor(screenX),
             Math.floor(screenY),
-            tileSize,
-            tileSize
+            tileSize + 1,
+            tileSize + 1
           );
 
           context.strokeStyle =
@@ -2185,7 +2574,8 @@
 
         if (
           screenX < -160 ||
-          screenX > VIEW_WIDTH + 160
+          screenX >
+            VIEW_WIDTH + 160
         ) {
           continue;
         }
@@ -2250,8 +2640,9 @@
           );
 
         if (
-          screenX < -80 ||
-          screenX > VIEW_WIDTH + 80
+          screenX < -100 ||
+          screenX >
+            VIEW_WIDTH + 100
         ) {
           continue;
         }
@@ -2344,8 +2735,8 @@
         0,
         screenGroundY,
         VIEW_WIDTH,
-        WORLD_HEIGHT -
-          WORLD_GROUND_Y
+        VIEW_HEIGHT -
+          screenGroundY
       );
 
       context.fillStyle =
@@ -2401,38 +2792,13 @@
       }
     }
 
-    function drawWorldBoundaryMarkers() {
-      const leftX =
-        worldToScreenX(0);
-
-      const rightX =
-        worldToScreenX(
-          WORLD_WIDTH
-        );
-
-      context.fillStyle =
-        "rgba(113,130,159,0.28)";
-
-      context.fillRect(
-        leftX,
-        0,
-        8,
-        VIEW_HEIGHT
-      );
-
-      context.fillRect(
-        rightX - 8,
-        0,
-        8,
-        VIEW_HEIGHT
-      );
-    }
-
-    function drawPlayerShadow() {
+    function drawEntityShadow(
+      worldX,
+      radiusX,
+      radiusY
+    ) {
       const screenX =
-        worldToScreenX(
-          player.x
-        );
+        worldToScreenX(worldX);
 
       const screenY =
         worldToScreenY(
@@ -2452,8 +2818,8 @@
       context.ellipse(
         screenX,
         screenY + 5,
-        50,
-        12,
+        radiusX,
+        radiusY,
         0,
         0,
         Math.PI * 2
@@ -2466,7 +2832,9 @@
 
     function drawPlayer() {
       const animation =
-        animations[player.animation];
+        playerAnimations[
+          player.animation
+        ];
 
       if (
         !animation ||
@@ -2536,10 +2904,101 @@
       context.restore();
     }
 
+    function drawOrc() {
+      const animation =
+        enemyAnimations[
+          orc.animation
+        ];
+
+      if (
+        !animation ||
+        animation.frames.length === 0
+      ) {
+        return;
+      }
+
+      const frame =
+        animation.frames[
+          Math.min(
+            orc.frameIndex,
+            animation.frames.length - 1
+          )
+        ];
+
+      if (!frame) {
+        return;
+      }
+
+      const screenX =
+        worldToScreenX(
+          orc.x
+        );
+
+      const screenY =
+        worldToScreenY(
+          orc.y
+        );
+
+      /*
+        畫面外不繪製，但 AI 仍可繼續運作。
+      */
+      if (
+        screenX < -160 ||
+        screenX >
+          VIEW_WIDTH + 160
+      ) {
+        return;
+      }
+
+      const drawWidth =
+        frame.width *
+        ENEMY_SCALE;
+
+      const drawHeight =
+        frame.height *
+        ENEMY_SCALE;
+
+      context.save();
+
+      context.translate(
+        Math.round(screenX),
+        Math.round(screenY)
+      );
+
+      context.scale(
+        orc.facing,
+        1
+      );
+
+      context.drawImage(
+        frame,
+        Math.round(
+          -drawWidth / 2
+        ),
+        Math.round(
+          -drawHeight
+        ),
+        Math.round(
+          drawWidth
+        ),
+        Math.round(
+          drawHeight
+        )
+      );
+
+      context.restore();
+    }
+
     function drawDebugHud() {
       if (!gameStarted) {
         return;
       }
+
+      const stateNames = {
+        patrol: "巡邏",
+        chase: "追蹤",
+        attack: "攻擊"
+      };
 
       context.save();
 
@@ -2547,10 +3006,10 @@
         "rgba(0,0,0,0.48)";
 
       context.fillRect(
-        24,
-        24,
-        272,
-        116
+        16,
+        22,
+        294,
+        142
       );
 
       context.fillStyle =
@@ -2562,25 +3021,31 @@
       context.fillText(
         `世界：${WORLD_WIDTH} × ${WORLD_HEIGHT}`,
         42,
-        53
+        51
       );
 
       context.fillText(
         `玩家：${Math.round(player.x)}, ${Math.round(player.y)}`,
         42,
-        79
+        77
       );
 
       context.fillText(
         `相機：${Math.round(camera.x)}, ${Math.round(camera.y)}`,
         42,
-        105
+        103
       );
 
       context.fillText(
         `視窗：${VIEW_WIDTH} × ${VIEW_HEIGHT}`,
         42,
-        131
+        129
+      );
+
+      context.fillText(
+        `ORC1：${stateNames[orc.state] || orc.state}`,
+        42,
+        155
       );
 
       context.restore();
@@ -2598,10 +3063,29 @@
       drawDungeonWalls();
       drawDungeonDecorations();
       drawGround();
-      drawWorldBoundaryMarkers();
+
+      /*
+        已移除：
+        drawWorldBoundaryMarkers();
+
+        左側 8px 半透明直條不再繪製。
+      */
 
       if (assetsLoaded) {
-        drawPlayerShadow();
+        drawEntityShadow(
+          orc.x,
+          47,
+          11
+        );
+
+        drawOrc();
+
+        drawEntityShadow(
+          player.x,
+          50,
+          12
+        );
+
         drawPlayer();
       }
 
@@ -2635,7 +3119,10 @@
         ShiftRight: "run"
       };
 
-      return keyBindings[code] || null;
+      return (
+        keyBindings[code] ||
+        null
+      );
     }
 
     function setControl(
@@ -2643,7 +3130,9 @@
       active,
       isNewPress = false
     ) {
-      if (!(controlName in input)) {
+      if (
+        !(controlName in input)
+      ) {
         return;
       }
 
@@ -2655,11 +3144,14 @@
           controlName === "attack"
         )
       ) {
-        pressed[controlName] = true;
+        pressed[
+          controlName
+        ] = true;
       }
 
-      input[controlName] =
-        active;
+      input[
+        controlName
+      ] = active;
     }
 
     window.addEventListener(
@@ -2839,6 +3331,7 @@
         updateJoystickCenter();
 
         joystick.active = true;
+
         joystick.pointerId =
           event.pointerId;
 
@@ -2985,7 +3478,9 @@
         const controlName of
         Object.keys(input)
       ) {
-        input[controlName] = false;
+        input[
+          controlName
+        ] = false;
       }
 
       pressed.jump = false;
@@ -3063,6 +3558,7 @@
         currentTime;
 
       updatePlayer(deltaTime);
+      updateOrc(deltaTime);
 
       if (gameStarted) {
         updateCamera(deltaTime);

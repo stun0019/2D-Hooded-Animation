@@ -1,1 +1,832 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  >
 
+  <title>2D Hooded Character Controller</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0b0d12;
+      touch-action: none;
+      overscroll-behavior: none;
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-wrapper {
+      position: relative;
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      max-width: 1280px;
+      max-height: 720px;
+      overflow: hidden;
+      background: #1d2330;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    #loading {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #11151d;
+      color: #ffffff;
+      font-size: clamp(16px, 2vw, 26px);
+      letter-spacing: 2px;
+    }
+
+    #controls {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .control-group {
+      position: absolute;
+      bottom: max(24px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    #move-controls {
+      left: max(24px, env(safe-area-inset-left));
+    }
+
+    #action-controls {
+      right: max(24px, env(safe-area-inset-right));
+    }
+
+    .control-button {
+      width: clamp(58px, 8vw, 92px);
+      height: clamp(58px, 8vw, 92px);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 50%;
+      background: rgba(10, 13, 20, 0.58);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(17px, 2.2vw, 28px);
+      font-weight: 700;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.25);
+      touch-action: none;
+    }
+
+    .control-button.small {
+      width: clamp(50px, 6.5vw, 76px);
+      height: clamp(50px, 6.5vw, 76px);
+      font-size: clamp(13px, 1.7vw, 20px);
+    }
+
+    .control-button.active {
+      transform: scale(0.91);
+      background: rgba(255, 255, 255, 0.28);
+      border-color: rgba(255, 255, 255, 0.8);
+    }
+
+    #desktop-help {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      z-index: 8;
+      transform: translateX(-50%);
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.38);
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 15px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      #controls {
+        opacity: 0.25;
+      }
+
+      #controls:hover {
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 900px), (hover: none) {
+      #desktop-help {
+        display: none;
+      }
+    }
+
+    @media (orientation: portrait) {
+      #game-wrapper::after {
+        content: "請將手機旋轉為橫向";
+        position: absolute;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0b0d12;
+        color: #ffffff;
+        font-size: 24px;
+        font-weight: 700;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="game-wrapper">
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+    <div id="loading">角色素材讀取中...</div>
+
+    <div id="desktop-help">
+      A/D 或方向鍵移動｜Shift 跑步｜Space 跳躍｜S 蹲下｜J 攻擊
+    </div>
+
+    <div id="controls">
+      <div id="move-controls" class="control-group">
+        <button class="control-button" data-control="left" aria-label="向左">
+          ◀
+        </button>
+
+        <button class="control-button" data-control="right" aria-label="向右">
+          ▶
+        </button>
+
+        <button class="control-button small" data-control="run" aria-label="跑步">
+          跑
+        </button>
+      </div>
+
+      <div id="action-controls" class="control-group">
+        <button class="control-button small" data-control="duck" aria-label="蹲下">
+          蹲
+        </button>
+
+        <button class="control-button" data-control="attack" aria-label="攻擊">
+          攻
+        </button>
+
+        <button class="control-button" data-control="jump" aria-label="跳躍">
+          跳
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const canvas = document.getElementById("game-canvas");
+    const context = canvas.getContext("2d");
+    const loadingElement = document.getElementById("loading");
+
+    context.imageSmoothingEnabled = false;
+
+    const GAME_WIDTH = 1280;
+    const GAME_HEIGHT = 720;
+
+    const GROUND_Y = 615;
+    const GRAVITY = 2200;
+    const WALK_SPEED = 230;
+    const RUN_SPEED = 400;
+    const JUMP_FORCE = 820;
+
+    /*
+      依照 GitHub 目前的資料夾結構載入圖片。
+
+      若 GitHub Pages 有大小寫錯誤，請確認：
+      2D_Character
+      Idle
+      Walk
+      Run
+      Duck
+      Jump
+      ATK
+    */
+    const animationDefinitions = {
+      idle: {
+        folder: "Idle",
+        prefix: "idle",
+        frameCount: 2,
+        frameDuration: 0.45,
+        loop: true
+      },
+
+      walk: {
+        folder: "Walk",
+        prefix: "Walk",
+        frameCount: 4,
+        frameDuration: 0.13,
+        loop: true
+      },
+
+      run: {
+        folder: "Run",
+        prefix: "Run",
+        frameCount: 8,
+        frameDuration: 0.075,
+        loop: true
+      },
+
+      duck: {
+        folder: "Duck",
+        prefix: "Duck",
+        frameCount: 6,
+        frameDuration: 0.08,
+        loop: false
+      },
+
+      jump: {
+        folder: "Jump",
+        prefix: "Jump",
+        frameCount: 8,
+        frameDuration: 0.09,
+        loop: false
+      },
+
+      attack: {
+        folder: "ATK",
+        prefix: "ATK",
+        frameCount: 8,
+        frameDuration: 0.065,
+        loop: false
+      }
+    };
+
+    const animations = {};
+
+    const input = {
+      left: false,
+      right: false,
+      run: false,
+      duck: false,
+      jump: false,
+      attack: false
+    };
+
+    const pressed = {
+      jump: false,
+      attack: false
+    };
+
+    const player = {
+      x: 180,
+      y: GROUND_Y,
+
+      velocityX: 0,
+      velocityY: 0,
+
+      width: 120,
+      height: 120,
+
+      facing: 1,
+      grounded: true,
+      ducking: false,
+      attacking: false,
+
+      animation: "idle",
+      frameIndex: 0,
+      frameTimer: 0
+    };
+
+    let previousTime = performance.now();
+    let assetsLoaded = false;
+
+    function padNumber(number) {
+      return String(number).padStart(2, "0");
+    }
+
+    function createFramePath(definition, frameNumber) {
+      return `2D_Character/${definition.folder}/${definition.prefix}${padNumber(frameNumber)}.png`;
+    }
+
+    function loadImage(path) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+
+        image.onload = () => resolve(image);
+
+        image.onerror = () => {
+          reject(new Error(`無法載入圖片：${path}`));
+        };
+
+        image.src = path;
+      });
+    }
+
+    async function loadAnimations() {
+      const loadingTasks = [];
+
+      for (const [animationName, definition] of Object.entries(animationDefinitions)) {
+        animations[animationName] = {
+          frames: [],
+          frameDuration: definition.frameDuration,
+          loop: definition.loop
+        };
+
+        for (let frameNumber = 1; frameNumber <= definition.frameCount; frameNumber++) {
+          const path = createFramePath(definition, frameNumber);
+
+          const task = loadImage(path).then((image) => {
+            animations[animationName].frames[frameNumber - 1] = image;
+          });
+
+          loadingTasks.push(task);
+        }
+      }
+
+      await Promise.all(loadingTasks);
+    }
+
+    function setAnimation(animationName, restart = false) {
+      if (!animations[animationName]) {
+        return;
+      }
+
+      if (player.animation !== animationName || restart) {
+        player.animation = animationName;
+        player.frameIndex = 0;
+        player.frameTimer = 0;
+      }
+    }
+
+    function triggerJump() {
+      if (!player.grounded || player.attacking) {
+        return;
+      }
+
+      player.grounded = false;
+      player.ducking = false;
+      player.velocityY = -JUMP_FORCE;
+
+      setAnimation("jump", true);
+    }
+
+    function triggerAttack() {
+      if (player.attacking) {
+        return;
+      }
+
+      player.attacking = true;
+      player.velocityX = 0;
+
+      setAnimation("attack", true);
+    }
+
+    function updatePlayer(deltaTime) {
+      if (pressed.jump) {
+        triggerJump();
+        pressed.jump = false;
+      }
+
+      if (pressed.attack) {
+        triggerAttack();
+        pressed.attack = false;
+      }
+
+      const horizontalDirection =
+        Number(input.right) - Number(input.left);
+
+      player.ducking =
+        input.duck &&
+        player.grounded &&
+        !player.attacking;
+
+      if (!player.attacking && !player.ducking) {
+        const speed = input.run ? RUN_SPEED : WALK_SPEED;
+
+        player.velocityX = horizontalDirection * speed;
+
+        if (horizontalDirection !== 0) {
+          player.facing = horizontalDirection;
+        }
+      } else {
+        player.velocityX = 0;
+      }
+
+      if (!player.grounded) {
+        player.velocityY += GRAVITY * deltaTime;
+      }
+
+      player.x += player.velocityX * deltaTime;
+      player.y += player.velocityY * deltaTime;
+
+      const halfWidth = player.width * 0.35;
+
+      player.x = Math.max(
+        halfWidth,
+        Math.min(GAME_WIDTH - halfWidth, player.x)
+      );
+
+      if (player.y >= GROUND_Y) {
+        player.y = GROUND_Y;
+        player.velocityY = 0;
+        player.grounded = true;
+      }
+
+      choosePlayerAnimation(horizontalDirection);
+      updateAnimation(deltaTime);
+    }
+
+    function choosePlayerAnimation(horizontalDirection) {
+      if (player.attacking) {
+        setAnimation("attack");
+        return;
+      }
+
+      if (!player.grounded) {
+        setAnimation("jump");
+        return;
+      }
+
+      if (player.ducking) {
+        setAnimation("duck");
+        return;
+      }
+
+      if (horizontalDirection !== 0) {
+        setAnimation(input.run ? "run" : "walk");
+        return;
+      }
+
+      setAnimation("idle");
+    }
+
+    function updateAnimation(deltaTime) {
+      const animation = animations[player.animation];
+
+      if (!animation || animation.frames.length === 0) {
+        return;
+      }
+
+      player.frameTimer += deltaTime;
+
+      while (player.frameTimer >= animation.frameDuration) {
+        player.frameTimer -= animation.frameDuration;
+        player.frameIndex += 1;
+
+        if (player.frameIndex >= animation.frames.length) {
+          if (animation.loop) {
+            player.frameIndex = 0;
+          } else {
+            player.frameIndex = animation.frames.length - 1;
+
+            if (player.animation === "attack") {
+              player.attacking = false;
+              setAnimation("idle", true);
+            }
+          }
+        }
+      }
+
+      /*
+        Jump 動畫依垂直速度選擇不同階段，
+        避免人物已經下降，動畫還停留在起跳幀。
+      */
+      if (player.animation === "jump") {
+        const jumpFrameCount = animation.frames.length;
+
+        if (player.velocityY < -450) {
+          player.frameIndex = Math.min(2, jumpFrameCount - 1);
+        } else if (player.velocityY < -100) {
+          player.frameIndex = Math.min(3, jumpFrameCount - 1);
+        } else if (player.velocityY < 180) {
+          player.frameIndex = Math.min(4, jumpFrameCount - 1);
+        } else if (player.velocityY < 500) {
+          player.frameIndex = Math.min(5, jumpFrameCount - 1);
+        } else {
+          player.frameIndex = Math.min(7, jumpFrameCount - 1);
+        }
+      }
+    }
+
+    function drawBackground() {
+      context.fillStyle = "#1b2230";
+      context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+      const gradient = context.createLinearGradient(
+        0,
+        0,
+        0,
+        GAME_HEIGHT
+      );
+
+      gradient.addColorStop(0, "#222b3c");
+      gradient.addColorStop(1, "#11161f");
+
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+      context.fillStyle = "#323a47";
+      context.fillRect(0, GROUND_Y + 1, GAME_WIDTH, GAME_HEIGHT - GROUND_Y);
+
+      context.fillStyle = "#5b6677";
+      context.fillRect(0, GROUND_Y, GAME_WIDTH, 5);
+
+      context.fillStyle = "rgba(255, 255, 255, 0.08)";
+
+      for (let x = 0; x < GAME_WIDTH; x += 80) {
+        context.fillRect(x, GROUND_Y + 34, 45, 4);
+      }
+    }
+
+    function drawPlayer() {
+      const animation = animations[player.animation];
+
+      if (!animation || animation.frames.length === 0) {
+        return;
+      }
+
+      const frame =
+        animation.frames[
+          Math.min(player.frameIndex, animation.frames.length - 1)
+        ];
+
+      if (!frame) {
+        return;
+      }
+
+      /*
+        角色繪製尺寸。
+
+        若角色太小或太大，可調整 PLAYER_SCALE。
+      */
+      const PLAYER_SCALE = 2.2;
+
+      const drawWidth = frame.width * PLAYER_SCALE;
+      const drawHeight = frame.height * PLAYER_SCALE;
+
+      /*
+        腳底固定在 player.y，
+        避免不同動畫圖片高度造成上下抖動。
+      */
+      const drawX = -drawWidth / 2;
+      const drawY = -drawHeight;
+
+      context.save();
+
+      context.translate(
+        Math.round(player.x),
+        Math.round(player.y)
+      );
+
+      context.scale(player.facing, 1);
+
+      context.drawImage(
+        frame,
+        Math.round(drawX),
+        Math.round(drawY),
+        Math.round(drawWidth),
+        Math.round(drawHeight)
+      );
+
+      context.restore();
+    }
+
+    function drawStatus() {
+      context.save();
+
+      context.fillStyle = "rgba(0, 0, 0, 0.35)";
+      context.fillRect(24, 24, 210, 72);
+
+      context.fillStyle = "#ffffff";
+      context.font = "22px Arial";
+      context.fillText(
+        `動畫：${player.animation}`,
+        42,
+        56
+      );
+
+      context.font = "18px Arial";
+      context.fillStyle = "rgba(255, 255, 255, 0.75)";
+      context.fillText(
+        player.grounded ? "狀態：地面" : "狀態：空中",
+        42,
+        83
+      );
+
+      context.restore();
+    }
+
+    function render() {
+      context.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+      drawBackground();
+      drawPlayer();
+      drawStatus();
+    }
+
+    function gameLoop(currentTime) {
+      const rawDeltaTime = (currentTime - previousTime) / 1000;
+      const deltaTime = Math.min(rawDeltaTime, 1 / 30);
+
+      previousTime = currentTime;
+
+      if (assetsLoaded) {
+        updatePlayer(deltaTime);
+        render();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function setControl(controlName, active, isNewPress = false) {
+      if (!(controlName in input)) {
+        return;
+      }
+
+      if (
+        isNewPress &&
+        active &&
+        (controlName === "jump" || controlName === "attack")
+      ) {
+        pressed[controlName] = true;
+      }
+
+      input[controlName] = active;
+    }
+
+    const keyBindings = {
+      ArrowLeft: "left",
+      KeyA: "left",
+
+      ArrowRight: "right",
+      KeyD: "right",
+
+      ShiftLeft: "run",
+      ShiftRight: "run",
+
+      ArrowDown: "duck",
+      KeyS: "duck",
+
+      Space: "jump",
+
+      KeyJ: "attack"
+    };
+
+    window.addEventListener("keydown", (event) => {
+      const controlName = keyBindings[event.code];
+
+      if (!controlName) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const isNewPress = !input[controlName];
+
+      setControl(controlName, true, isNewPress);
+    });
+
+    window.addEventListener("keyup", (event) => {
+      const controlName = keyBindings[event.code];
+
+      if (!controlName) {
+        return;
+      }
+
+      event.preventDefault();
+      setControl(controlName, false);
+    });
+
+    window.addEventListener("blur", resetAllInputs);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        resetAllInputs();
+      }
+    });
+
+    function resetAllInputs() {
+      for (const key of Object.keys(input)) {
+        input[key] = false;
+      }
+
+      pressed.jump = false;
+      pressed.attack = false;
+
+      document
+        .querySelectorAll(".control-button")
+        .forEach((button) => {
+          button.classList.remove("active");
+        });
+    }
+
+    document
+      .querySelectorAll(".control-button")
+      .forEach((button) => {
+        const controlName = button.dataset.control;
+
+        const activate = (event) => {
+          event.preventDefault();
+
+          const isNewPress = !input[controlName];
+
+          button.classList.add("active");
+          setControl(controlName, true, isNewPress);
+
+          if (button.setPointerCapture && event.pointerId !== undefined) {
+            button.setPointerCapture(event.pointerId);
+          }
+        };
+
+        const deactivate = (event) => {
+          event.preventDefault();
+
+          button.classList.remove("active");
+          setControl(controlName, false);
+        };
+
+        button.addEventListener("pointerdown", activate);
+        button.addEventListener("pointerup", deactivate);
+        button.addEventListener("pointercancel", deactivate);
+        button.addEventListener("lostpointercapture", deactivate);
+        button.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+        });
+      });
+
+    async function enterFullscreen() {
+      const wrapper = document.getElementById("game-wrapper");
+
+      try {
+        if (
+          document.fullscreenElement ||
+          !wrapper.requestFullscreen
+        ) {
+          return;
+        }
+
+        await wrapper.requestFullscreen();
+      } catch (error) {
+        /*
+          部分手機瀏覽器不允許自動全螢幕。
+          不影響遊戲運作。
+        */
+      }
+    }
+
+    document.addEventListener(
+      "pointerdown",
+      () => {
+        enterFullscreen();
+      },
+      { once: true }
+    );
+
+    async function initializeGame() {
+      try {
+        await loadAnimations();
+
+        assetsLoaded = true;
+        loadingElement.style.display = "none";
+
+        requestAnimationFrame(gameLoop);
+      } catch (error) {
+        console.error(error);
+
+        loadingElement.textContent =
+          "素材載入失敗，請檢查圖片路徑與檔名大小寫。";
+      }
+    }
+
+    initializeGame();
+  </script>
+</body>
+</html>

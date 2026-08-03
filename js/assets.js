@@ -1,14 +1,26 @@
 "use strict";
 
+/*
+  Hooded Escape
+
+  玩家動畫、ORC1／ORC2 動畫、
+  圖片載入與敵人腳底 Anchor 偵測。
+*/
+
 /* ==================================================
-   動畫定義
+   玩家動畫定義
 ================================================== */
 
 const playerAnimationDefinitions = {
   idle: {
     folder: "Idle",
     prefix: "idle",
-    frameCount: 2,
+
+    frameNumbers: [
+      1,
+      2
+    ],
+
     frameDuration: 0.42,
     loop: true
   },
@@ -16,7 +28,14 @@ const playerAnimationDefinitions = {
   walk: {
     folder: "Walk",
     prefix: "Walk",
-    frameCount: 4,
+
+    frameNumbers: [
+      1,
+      2,
+      3,
+      4
+    ],
+
     frameDuration: 0.13,
     loop: true
   },
@@ -24,7 +43,18 @@ const playerAnimationDefinitions = {
   run: {
     folder: "Run",
     prefix: "Run",
-    frameCount: 8,
+
+    frameNumbers: [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+
     frameDuration: 0.075,
     loop: true
   },
@@ -32,7 +62,16 @@ const playerAnimationDefinitions = {
   duck: {
     folder: "Duck",
     prefix: "Duck",
-    frameCount: 6,
+
+    frameNumbers: [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+
     frameDuration: 0.08,
     loop: false
   },
@@ -40,7 +79,18 @@ const playerAnimationDefinitions = {
   jump: {
     folder: "Jump",
     prefix: "Jump",
-    frameCount: 8,
+
+    frameNumbers: [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+
     frameDuration: 0.09,
     loop: false
   },
@@ -48,74 +98,236 @@ const playerAnimationDefinitions = {
   attack: {
     folder: "ATK",
     prefix: "ATK",
-    frameCount: 8,
+
+    frameNumbers: [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+
     frameDuration: 0.065,
     loop: false
-  }
-};
-
-const enemyAnimationDefinitions = {
-  idle: {
-    folder: "Idle",
-    prefix: "Idle",
-    frameCount: 4,
-    frameDuration: 0.19,
-    loop: true
   },
 
-  walk: {
-    folder: "Walk",
-    prefix: "Walk",
-    frameCount: 6,
+  /*
+    玩家受傷動畫。
+
+    素材：
+    2D_Character/Hurt/Hurt01.png
+    2D_Character/Hurt/Hurt02.png
+  */
+  hurt: {
+    folder: "Hurt",
+    prefix: "Hurt",
+
+    frameNumbers: [
+      1,
+      2
+    ],
+
     frameDuration: 0.12,
-    loop: true
-  },
-
-  attack: {
-    folder: "ATK",
-    prefix: "ATK",
-    frameCount: 8,
-    frameDuration: 0.085,
     loop: false
   }
 };
 
+/* ==================================================
+   敵人動畫定義
+================================================== */
+
+/*
+  ORC1 與 ORC2 使用不同素材資料夾。
+
+  ORC2 的 Walk 素材編號為：
+  Walk12.png～Walk17.png
+*/
+const enemyAnimationDefinitions = {
+  ORC1: {
+    idle: {
+      folder: "Idle",
+      prefix: "Idle",
+
+      frameNumbers: [
+        1,
+        2,
+        3,
+        4
+      ],
+
+      frameDuration: 0.19,
+      loop: true
+    },
+
+    walk: {
+      folder: "Walk",
+      prefix: "Walk",
+
+      frameNumbers: [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+
+      frameDuration: 0.12,
+      loop: true
+    },
+
+    attack: {
+      folder: "ATK",
+      prefix: "ATK",
+
+      frameNumbers: [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+
+      frameDuration: 0.085,
+      loop: false
+    }
+  },
+
+  ORC2: {
+    idle: {
+      folder: "Idle",
+      prefix: "Idle",
+
+      frameNumbers: [
+        1,
+        2,
+        3,
+        4
+      ],
+
+      frameDuration: 0.19,
+      loop: true
+    },
+
+    /*
+      ORC2 Walk 圖片的原始命名
+      從 Walk12.png 開始。
+    */
+    walk: {
+      folder: "Walk",
+      prefix: "Walk",
+
+      frameNumbers: [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+
+      frameDuration: 0.12,
+      loop: true
+    },
+
+    attack: {
+      folder: "ATK",
+      prefix: "ATK",
+
+      frameNumbers: [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+
+      frameDuration: 0.085,
+      loop: false
+    }
+  }
+};
+
+/* ==================================================
+   動畫素材容器
+================================================== */
+
+/*
+  玩家動畫使用方式：
+
+  playerAnimations.idle
+  playerAnimations.walk
+  playerAnimations.hurt
+*/
 const playerAnimations = {};
+
+/*
+  敵人動畫使用方式：
+
+  enemyAnimations.ORC1.idle
+  enemyAnimations.ORC1.walk
+  enemyAnimations.ORC2.idle
+  enemyAnimations.ORC2.walk
+*/
 const enemyAnimations = {};
 
 /* ==================================================
    圖片載入
 ================================================== */
 
-function loadImage(path) {
+function loadImage(
+  path
+) {
   return new Promise(
-    (resolve, reject) => {
-      const image = new Image();
+    (
+      resolve,
+      reject
+    ) => {
+      const image =
+        new Image();
 
-      image.onload = () => {
-        resolve(image);
-      };
+      image.onload =
+        () => {
+          resolve(
+            image
+          );
+        };
 
-      image.onerror = () => {
-        reject(
-          new Error(
-            `無法載入圖片：${path}`
-          )
-        );
-      };
+      image.onerror =
+        () => {
+          reject(
+            new Error(
+              `無法載入圖片：${path}`
+            )
+          );
+        };
 
-      image.src = path;
+      image.src =
+        path;
     }
   );
 }
 
 /* ==================================================
-   ORC 腳底 Anchor 偵測
+   敵人腳底 Anchor 偵測
 ================================================== */
 
-function calculateSpriteFootOffset(image) {
+function calculateSpriteFootOffset(
+  image
+) {
   const scanCanvas =
-    document.createElement("canvas");
+    document.createElement(
+      "canvas"
+    );
 
   scanCanvas.width =
     image.naturalWidth ||
@@ -129,7 +341,8 @@ function calculateSpriteFootOffset(image) {
     scanCanvas.getContext(
       "2d",
       {
-        willReadFrequently: true
+        willReadFrequently:
+          true
       }
     );
 
@@ -170,8 +383,11 @@ function calculateSpriteFootOffset(image) {
   }
 
   /*
-    只掃描圖片中央 30%～70% 區域，
-    避免左右武器被誤判為腳底。
+    只掃描圖片中央 30%～70%。
+
+    避免左右兩側的武器、
+    斧頭或其他突出物，
+    被誤判為角色腳底。
   */
   const startX =
     Math.floor(
@@ -185,19 +401,27 @@ function calculateSpriteFootOffset(image) {
       0.7
     );
 
-  let lowestOpaqueY = -1;
+  let lowestOpaqueY =
+    -1;
 
   for (
     let y =
       scanCanvas.height - 1;
+
     y >= 0;
+
     y -= 1
   ) {
-    let foundOpaquePixel = false;
+    let foundOpaquePixel =
+      false;
 
     for (
-      let x = startX;
-      x < endX;
+      let x =
+        startX;
+
+      x <
+        endX;
+
       x += 1
     ) {
       const alphaIndex =
@@ -209,31 +433,113 @@ function calculateSpriteFootOffset(image) {
           4 +
         3;
 
-      if (
+      const alpha =
         imageData.data[
           alphaIndex
-        ] > 20
+        ];
+
+      if (
+        alpha >
+        20
       ) {
-        foundOpaquePixel = true;
+        foundOpaquePixel =
+          true;
+
         break;
       }
     }
 
-    if (foundOpaquePixel) {
-      lowestOpaqueY = y;
+    if (
+      foundOpaquePixel
+    ) {
+      lowestOpaqueY =
+        y;
+
       break;
     }
   }
 
-  if (lowestOpaqueY < 0) {
+  if (
+    lowestOpaqueY <
+    0
+  ) {
     return 0;
   }
 
+  /*
+    回傳圖片最底部透明區域高度。
+  */
   return (
     scanCanvas.height -
     1 -
     lowestOpaqueY
   );
+}
+
+/* ==================================================
+   單一動畫載入
+================================================== */
+
+async function loadAnimation(
+  definition,
+  basePath,
+  analyzeFootOffsets
+) {
+  const animation = {
+    frames: [],
+    footOffsets: [],
+
+    frameDuration:
+      definition.frameDuration,
+
+    loop:
+      definition.loop
+  };
+
+  const tasks =
+    definition.frameNumbers.map(
+      (
+        frameNumber,
+        destinationIndex
+      ) => {
+        const path =
+          basePath +
+          "/" +
+          definition.folder +
+          "/" +
+          definition.prefix +
+          padNumber(
+            frameNumber
+          ) +
+          ".png";
+
+        return loadImage(
+          path
+        ).then(
+          (image) => {
+            animation.frames[
+              destinationIndex
+            ] =
+              image;
+
+            animation.footOffsets[
+              destinationIndex
+            ] =
+              analyzeFootOffsets
+                ? calculateSpriteFootOffset(
+                    image
+                  )
+                : 0;
+          }
+        );
+      }
+    );
+
+  await Promise.all(
+    tasks
+  );
+
+  return animation;
 }
 
 /* ==================================================
@@ -244,7 +550,8 @@ async function loadAnimationGroup(
   destination,
   definitions,
   basePath,
-  analyzeFootOffsets = false
+  analyzeFootOffsets =
+    false
 ) {
   const tasks = [];
 
@@ -252,85 +559,100 @@ async function loadAnimationGroup(
     const [
       animationName,
       definition
-    ] of Object.entries(definitions)
+    ] of Object.entries(
+      definitions
+    )
   ) {
-    destination[
-      animationName
-    ] = {
-      frames: [],
-      footOffsets: [],
-
-      frameDuration:
-        definition.frameDuration,
-
-      loop:
-        definition.loop
-    };
-
-    for (
-      let frameNumber = 1;
-      frameNumber <=
-        definition.frameCount;
-      frameNumber += 1
-    ) {
-      const path =
-        basePath +
-        "/" +
-        definition.folder +
-        "/" +
-        definition.prefix +
-        padNumber(frameNumber) +
-        ".png";
-
-      tasks.push(
-        loadImage(path).then(
-          (image) => {
-            const frameIndex =
-              frameNumber - 1;
-
-            destination[
-              animationName
-            ].frames[
-              frameIndex
-            ] = image;
-
-            destination[
-              animationName
-            ].footOffsets[
-              frameIndex
-            ] =
-              analyzeFootOffsets
-                ? calculateSpriteFootOffset(
-                    image
-                  )
-                : 0;
-          }
-        )
-      );
-    }
+    tasks.push(
+      loadAnimation(
+        definition,
+        basePath,
+        analyzeFootOffsets
+      ).then(
+        (
+          animation
+        ) => {
+          destination[
+            animationName
+          ] =
+            animation;
+        }
+      )
+    );
   }
 
-  await Promise.all(tasks);
+  await Promise.all(
+    tasks
+  );
 }
 
 /* ==================================================
-   載入全部角色素材
+   玩家動畫載入
+================================================== */
+
+async function loadPlayerAnimations() {
+  await loadAnimationGroup(
+    playerAnimations,
+    playerAnimationDefinitions,
+    "2D_Character",
+    false
+  );
+}
+
+/* ==================================================
+   敵人動畫載入
+================================================== */
+
+async function loadEnemyAnimations() {
+  const tasks = [];
+
+  for (
+    const [
+      enemyType,
+      definitions
+    ] of Object.entries(
+      enemyAnimationDefinitions
+    )
+  ) {
+    const typeConfig =
+      ENEMY_TYPE_CONFIGS[
+        enemyType
+      ];
+
+    if (!typeConfig) {
+      throw new Error(
+        `找不到敵人設定：${enemyType}`
+      );
+    }
+
+    enemyAnimations[
+      enemyType
+    ] = {};
+
+    tasks.push(
+      loadAnimationGroup(
+        enemyAnimations[
+          enemyType
+        ],
+        definitions,
+        typeConfig.basePath,
+        true
+      )
+    );
+  }
+
+  await Promise.all(
+    tasks
+  );
+}
+
+/* ==================================================
+   載入全部動畫素材
 ================================================== */
 
 async function loadAllAnimations() {
   await Promise.all([
-    loadAnimationGroup(
-      playerAnimations,
-      playerAnimationDefinitions,
-      "2D_Character",
-      false
-    ),
-
-    loadAnimationGroup(
-      enemyAnimations,
-      enemyAnimationDefinitions,
-      "2D_Enemy/ORC1",
-      true
-    )
+    loadPlayerAnimations(),
+    loadEnemyAnimations()
   ]);
 }

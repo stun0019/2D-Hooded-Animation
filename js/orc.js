@@ -1,150 +1,482 @@
 "use strict";
 
-/* ORC 動畫、AI、繪製與頭頂血條 */
+/*
+  Hooded Escape
+
+  ORC1／ORC2 建立、巡邏、追蹤、攻擊、
+  多敵人更新、死亡淡出與重生。
+*/
 
 /* ==================================================
-   ORC 動畫
+   取得敵人動畫資料
 ================================================== */
 
-function setOrcAnimation(
+function getEnemyAnimationSet(
+  enemy
+) {
+  return (
+    enemyAnimations[
+      enemy.type
+    ] || null
+  );
+}
+
+function getEnemyAnimation(
+  enemy,
+  animationName =
+    enemy.animation
+) {
+  const animationSet =
+    getEnemyAnimationSet(
+      enemy
+    );
+
+  if (!animationSet) {
+    return null;
+  }
+
+  return (
+    animationSet[
+      animationName
+    ] || null
+  );
+}
+
+/* ==================================================
+   建立敵人
+================================================== */
+
+function createEnemy(
+  spawnConfig
+) {
+  const typeConfig =
+    ENEMY_TYPE_CONFIGS[
+      spawnConfig.type
+    ];
+
+  if (!typeConfig) {
+    throw new Error(
+      `找不到敵人類型設定：${spawnConfig.type}`
+    );
+  }
+
+  const initialDirection =
+    spawnConfig
+      .patrolDirection <
+    0
+      ? -1
+      : 1;
+
+  return {
+    id:
+      spawnConfig.id,
+
+    type:
+      spawnConfig.type,
+
+    displayName:
+      typeConfig.displayName,
+
+    spawnX:
+      spawnConfig.spawnX,
+
+    x:
+      spawnConfig.spawnX,
+
+    y:
+      WORLD_GROUND_Y,
+
+    velocityX: 0,
+
+    facing:
+      initialDirection,
+
+    scale:
+      typeConfig.scale,
+
+    spriteFacingMultiplier:
+      typeConfig
+        .spriteFacingMultiplier,
+
+    level:
+      typeConfig.level,
+
+    maxHp:
+      typeConfig.maxHp,
+
+    hp:
+      typeConfig.maxHp,
+
+    attackDamage:
+      typeConfig.attackDamage,
+
+    patrolSpeed:
+      typeConfig.patrolSpeed,
+
+    chaseSpeed:
+      typeConfig.chaseSpeed,
+
+    detectionRange:
+      typeConfig
+        .detectionRange,
+
+    attackRange:
+      typeConfig.attackRange,
+
+    attackCooldownDuration:
+      typeConfig
+        .attackCooldownDuration,
+
+    patrolWaitDuration:
+      typeConfig
+        .patrolWaitDuration,
+
+    fadeDuration:
+      typeConfig.fadeDuration,
+
+    respawnTime:
+      typeConfig.respawnTime,
+
+    extraFootOffset:
+      typeConfig
+        .extraFootOffset,
+
+    patrolMinX:
+      spawnConfig.patrolMinX,
+
+    patrolMaxX:
+      spawnConfig.patrolMaxX,
+
+    initialPatrolDirection:
+      initialDirection,
+
+    patrolDirection:
+      initialDirection,
+
+    patrolWaitTimer: 0,
+
+    state: "patrol",
+
+    attacking: false,
+
+    attackCooldown: 0,
+
+    animation: "idle",
+
+    frameIndex: 0,
+    frameTimer: 0,
+
+    attackHitRegistered:
+      false,
+
+    dead: false,
+
+    opacity: 1,
+
+    fadeTimer: 0,
+
+    respawnTimer: 0
+  };
+}
+
+/* ==================================================
+   初始化全部敵人
+================================================== */
+
+function initializeEnemies() {
+  enemies.length = 0;
+
+  for (
+    const spawnConfig of
+    ENEMY_SPAWN_CONFIGS
+  ) {
+    enemies.push(
+      createEnemy(
+        spawnConfig
+      )
+    );
+  }
+}
+
+/* ==================================================
+   敵人動畫切換
+================================================== */
+
+function setEnemyAnimation(
+  enemy,
   animationName,
   restart = false
 ) {
-  if (
-    !enemyAnimations[
+  const animation =
+    getEnemyAnimation(
+      enemy,
       animationName
-    ]
-  ) {
+    );
+
+  if (!animation) {
     return;
   }
 
   if (
-    orc.animation !==
+    enemy.animation !==
       animationName ||
     restart
   ) {
-    orc.animation =
+    enemy.animation =
       animationName;
 
-    orc.frameIndex = 0;
-    orc.frameTimer = 0;
+    enemy.frameIndex = 0;
+    enemy.frameTimer = 0;
 
     if (
       animationName ===
       "attack"
     ) {
-      orc.attackHitRegistered =
+      enemy.attackHitRegistered =
         false;
     }
   }
 }
 
-function updateOrcAnimation(
+/* ==================================================
+   敵人攻擊完成
+================================================== */
+
+function completeEnemyAttack(
+  enemy
+) {
+  enemy.attacking = false;
+
+  enemy.attackCooldown =
+    enemy
+      .attackCooldownDuration;
+
+  enemy.velocityX = 0;
+
+  enemy.state = "patrol";
+
+  setEnemyAnimation(
+    enemy,
+    "idle",
+    true
+  );
+}
+
+/* ==================================================
+   敵人動畫更新
+================================================== */
+
+function updateEnemyAnimation(
+  enemy,
   deltaTime
 ) {
   const animation =
-    enemyAnimations[
-      orc.animation
-    ];
+    getEnemyAnimation(
+      enemy
+    );
 
   if (
     !animation ||
-    animation.frames.length === 0
+    animation.frames.length ===
+      0
   ) {
     return;
   }
 
-  orc.frameTimer +=
+  enemy.frameTimer +=
     deltaTime;
 
   while (
-    orc.frameTimer >=
+    enemy.frameTimer >=
     animation.frameDuration
   ) {
-    orc.frameTimer -=
+    enemy.frameTimer -=
       animation.frameDuration;
 
-    orc.frameIndex += 1;
+    enemy.frameIndex += 1;
 
     if (
-      orc.frameIndex >=
+      enemy.frameIndex >=
       animation.frames.length
     ) {
       if (animation.loop) {
-        orc.frameIndex = 0;
+        enemy.frameIndex = 0;
       } else {
-        orc.frameIndex =
+        enemy.frameIndex =
           animation.frames.length -
           1;
 
         if (
-          orc.animation ===
+          enemy.animation ===
           "attack"
         ) {
-          orc.attacking = false;
-
-          orc.attackCooldown =
-            ORC_ATTACK_COOLDOWN;
-
-          setOrcAnimation(
-            "idle",
-            true
+          completeEnemyAttack(
+            enemy
           );
+
+          return;
         }
+
+        return;
       }
     }
   }
 }
 
 /* ==================================================
-   ORC AI
+   開始敵人攻擊
 ================================================== */
 
-function startOrcAttack() {
+function startEnemyAttack(
+  enemy
+) {
   if (
-    orc.dead ||
-    orc.attacking ||
-    orc.attackCooldown > 0
+    enemy.dead ||
+    enemy.attacking ||
+    enemy.attackCooldown > 0 ||
+    gameFailed
   ) {
     return;
   }
 
-  orc.attacking = true;
-  orc.state = "attack";
-  orc.velocityX = 0;
+  enemy.attacking = true;
 
-  orc.facing =
-    player.x >= orc.x
+  enemy.state = "attack";
+
+  enemy.velocityX = 0;
+
+  enemy.facing =
+    player.x >= enemy.x
       ? 1
       : -1;
 
-  setOrcAnimation(
+  setEnemyAnimation(
+    enemy,
     "attack",
     true
   );
 }
 
-function updateOrc(
-  deltaTime
-) {
-  if (!gameStarted) {
-    if (assetsLoaded) {
-      updateOrcAnimation(
-        deltaTime
-      );
-    }
+/* ==================================================
+   敵人死亡
+================================================== */
 
+function startEnemyDeath(
+  enemy
+) {
+  if (enemy.dead) {
     return;
   }
 
-  if (orc.dead) {
-    orc.fadeTimer +=
+  enemy.dead = true;
+
+  enemy.state = "dead";
+
+  enemy.attacking = false;
+
+  enemy.velocityX = 0;
+
+  enemy.attackCooldown = 0;
+
+  enemy.attackHitRegistered =
+    false;
+
+  enemy.opacity = 1;
+
+  enemy.fadeTimer = 0;
+
+  enemy.respawnTimer =
+    enemy.respawnTime;
+}
+
+/* ==================================================
+   敵人重生
+================================================== */
+
+function respawnEnemy(
+  enemy
+) {
+  enemy.x =
+    enemy.spawnX;
+
+  enemy.y =
+    WORLD_GROUND_Y;
+
+  enemy.velocityX = 0;
+
+  enemy.facing =
+    enemy
+      .initialPatrolDirection;
+
+  enemy.hp =
+    enemy.maxHp;
+
+  enemy.state = "patrol";
+
+  enemy.attacking = false;
+
+  enemy.attackCooldown = 0;
+
+  enemy.patrolDirection =
+    enemy
+      .initialPatrolDirection;
+
+  enemy.patrolWaitTimer = 0;
+
+  enemy.attackHitRegistered =
+    false;
+
+  enemy.dead = false;
+
+  enemy.opacity = 1;
+
+  enemy.fadeTimer = 0;
+
+  enemy.respawnTimer = 0;
+
+  setEnemyAnimation(
+    enemy,
+    "idle",
+    true
+  );
+}
+
+/* ==================================================
+   重設全部敵人
+================================================== */
+
+function resetAllEnemies() {
+  for (
+    const enemy of enemies
+  ) {
+    respawnEnemy(
+      enemy
+    );
+  }
+}
+
+/* ==================================================
+   死亡淡出與重生倒數
+================================================== */
+
+function updateDeadEnemy(
+  enemy,
+  deltaTime
+) {
+  enemy.velocityX = 0;
+
+  enemy.attacking = false;
+
+  if (
+    enemy.opacity > 0
+  ) {
+    enemy.fadeTimer +=
       deltaTime;
 
-    orc.opacity = clamp(
+    enemy.opacity = clamp(
       1 -
-        orc.fadeTimer /
-          ORC_FADE_DURATION,
+        enemy.fadeTimer /
+          enemy.fadeDuration,
       0,
       1
     );
@@ -152,23 +484,245 @@ function updateOrc(
     return;
   }
 
+  enemy.respawnTimer =
+    Math.max(
+      0,
+      enemy.respawnTimer -
+        deltaTime
+    );
+
+  if (
+    enemy.respawnTimer <= 0
+  ) {
+    respawnEnemy(
+      enemy
+    );
+  }
+}
+
+/* ==================================================
+   敵人巡邏
+================================================== */
+
+function updateEnemyPatrol(
+  enemy,
+  deltaTime
+) {
+  enemy.state = "patrol";
+
+  if (
+    enemy.patrolWaitTimer >
+    0
+  ) {
+    enemy.patrolWaitTimer =
+      Math.max(
+        0,
+        enemy.patrolWaitTimer -
+          deltaTime
+      );
+
+    enemy.velocityX = 0;
+
+    setEnemyAnimation(
+      enemy,
+      "idle"
+    );
+
+    return;
+  }
+
+  enemy.velocityX =
+    enemy.patrolDirection *
+    enemy.patrolSpeed;
+
+  enemy.facing =
+    enemy.patrolDirection;
+
+  setEnemyAnimation(
+    enemy,
+    "walk"
+  );
+}
+
+/* ==================================================
+   敵人追蹤
+================================================== */
+
+function updateEnemyChase(
+  enemy,
+  differenceX
+) {
+  enemy.state = "chase";
+
+  const direction =
+    differenceX >= 0
+      ? 1
+      : -1;
+
+  enemy.facing =
+    direction;
+
+  enemy.velocityX =
+    direction *
+    enemy.chaseSpeed;
+
+  setEnemyAnimation(
+    enemy,
+    "walk"
+  );
+}
+
+/* ==================================================
+   敵人近距離行為
+================================================== */
+
+function updateEnemyAttackRange(
+  enemy,
+  differenceX
+) {
+  enemy.state = "attack";
+
+  enemy.velocityX = 0;
+
+  enemy.facing =
+    differenceX >= 0
+      ? 1
+      : -1;
+
+  if (
+    enemy.attackCooldown <=
+    0
+  ) {
+    startEnemyAttack(
+      enemy
+    );
+  } else {
+    setEnemyAnimation(
+      enemy,
+      "idle"
+    );
+  }
+}
+
+/* ==================================================
+   敵人巡邏邊界
+================================================== */
+
+function resolveEnemyPatrolBoundary(
+  enemy
+) {
+  if (
+    enemy.state !==
+    "patrol"
+  ) {
+    return;
+  }
+
+  if (
+    enemy.x <=
+    enemy.patrolMinX
+  ) {
+    enemy.x =
+      enemy.patrolMinX;
+
+    enemy.patrolDirection =
+      1;
+
+    enemy.facing = 1;
+
+    enemy.patrolWaitTimer =
+      enemy
+        .patrolWaitDuration;
+
+    enemy.velocityX = 0;
+
+    setEnemyAnimation(
+      enemy,
+      "idle",
+      true
+    );
+
+    return;
+  }
+
+  if (
+    enemy.x >=
+    enemy.patrolMaxX
+  ) {
+    enemy.x =
+      enemy.patrolMaxX;
+
+    enemy.patrolDirection =
+      -1;
+
+    enemy.facing = -1;
+
+    enemy.patrolWaitTimer =
+      enemy
+        .patrolWaitDuration;
+
+    enemy.velocityX = 0;
+
+    setEnemyAnimation(
+      enemy,
+      "idle",
+      true
+    );
+  }
+}
+
+/* ==================================================
+   單隻敵人更新
+================================================== */
+
+function updateEnemy(
+  enemy,
+  deltaTime
+) {
+  if (!gameStarted) {
+    if (assetsLoaded) {
+      updateEnemyAnimation(
+        enemy,
+        deltaTime
+      );
+    }
+
+    return;
+  }
+
   /*
-    Stage Intro 期間敵人保持 Idle，
-    不提前靠近或攻擊玩家。
+    死亡狀態優先處理淡出與重生。
+  */
+  if (enemy.dead) {
+    updateDeadEnemy(
+      enemy,
+      deltaTime
+    );
+
+    return;
+  }
+
+  /*
+    STAGE Intro 或 FAIL 期間，
+    存活敵人停止行動。
   */
   if (
     !playerControlEnabled ||
     gameFailed
   ) {
-    orc.velocityX = 0;
-    orc.attacking = false;
-    orc.state = "patrol";
+    enemy.velocityX = 0;
 
-    setOrcAnimation(
+    enemy.attacking = false;
+
+    enemy.state = "patrol";
+
+    setEnemyAnimation(
+      enemy,
       "idle"
     );
 
-    updateOrcAnimation(
+    updateEnemyAnimation(
+      enemy,
       deltaTime
     );
 
@@ -176,20 +730,26 @@ function updateOrc(
   }
 
   if (
-    orc.attackCooldown > 0
+    enemy.attackCooldown >
+    0
   ) {
-    orc.attackCooldown =
+    enemy.attackCooldown =
       Math.max(
         0,
-        orc.attackCooldown -
+        enemy.attackCooldown -
           deltaTime
       );
   }
 
-  if (orc.attacking) {
-    orc.velocityX = 0;
+  /*
+    攻擊動畫播放期間，
+    不進行其他 AI 行為。
+  */
+  if (enemy.attacking) {
+    enemy.velocityX = 0;
 
-    updateOrcAnimation(
+    updateEnemyAnimation(
+      enemy,
       deltaTime
     );
 
@@ -197,7 +757,7 @@ function updateOrc(
   }
 
   const differenceX =
-    player.x - orc.x;
+    player.x - enemy.x;
 
   const distanceX =
     Math.abs(
@@ -206,158 +766,126 @@ function updateOrc(
 
   if (
     distanceX <=
-    ORC_ATTACK_RANGE
+    enemy.attackRange
   ) {
-    orc.state = "attack";
-    orc.velocityX = 0;
-
-    orc.facing =
-      differenceX >= 0
-        ? 1
-        : -1;
-
-    if (
-      orc.attackCooldown <= 0
-    ) {
-      startOrcAttack();
-    } else {
-      setOrcAnimation(
-        "idle"
-      );
-    }
+    updateEnemyAttackRange(
+      enemy,
+      differenceX
+    );
   } else if (
     distanceX <=
-    ORC_DETECTION_RANGE
+    enemy.detectionRange
   ) {
-    orc.state = "chase";
-
-    const direction =
-      differenceX >= 0
-        ? 1
-        : -1;
-
-    orc.facing =
-      direction;
-
-    orc.velocityX =
-      direction *
-      ORC_CHASE_SPEED;
-
-    setOrcAnimation(
-      "walk"
+    updateEnemyChase(
+      enemy,
+      differenceX
     );
   } else {
-    orc.state = "patrol";
-
-    if (
-      orc.patrolWaitTimer > 0
-    ) {
-      orc.patrolWaitTimer =
-        Math.max(
-          0,
-          orc.patrolWaitTimer -
-            deltaTime
-        );
-
-      orc.velocityX = 0;
-
-      setOrcAnimation(
-        "idle"
-      );
-    } else {
-      orc.velocityX =
-        orc.patrolDirection *
-        ORC_PATROL_SPEED;
-
-      orc.facing =
-        orc.patrolDirection;
-
-      setOrcAnimation(
-        "walk"
-      );
-    }
+    updateEnemyPatrol(
+      enemy,
+      deltaTime
+    );
   }
 
-  orc.x +=
-    orc.velocityX *
+  enemy.x +=
+    enemy.velocityX *
     deltaTime;
 
-  if (
-    orc.state ===
-    "patrol"
-  ) {
-    if (
-      orc.x <=
-      orc.patrolMinX
-    ) {
-      orc.x =
-        orc.patrolMinX;
+  resolveEnemyPatrolBoundary(
+    enemy
+  );
 
-      orc.patrolDirection = 1;
-
-      orc.patrolWaitTimer =
-        ORC_PATROL_WAIT_TIME;
-
-      orc.velocityX = 0;
-
-      setOrcAnimation(
-        "idle",
-        true
-      );
-    } else if (
-      orc.x >=
-      orc.patrolMaxX
-    ) {
-      orc.x =
-        orc.patrolMaxX;
-
-      orc.patrolDirection = -1;
-
-      orc.patrolWaitTimer =
-        ORC_PATROL_WAIT_TIME;
-
-      orc.velocityX = 0;
-
-      setOrcAnimation(
-        "idle",
-        true
-      );
-    }
-  }
-
-  orc.x = clamp(
-    orc.x,
+  enemy.x = clamp(
+    enemy.x,
     80,
     WORLD_WIDTH - 80
   );
 
-  updateOrcAnimation(
+  enemy.y =
+    WORLD_GROUND_Y;
+
+  updateEnemyAnimation(
+    enemy,
     deltaTime
   );
 }
 
 /* ==================================================
-   ORC 腳底 Anchor
+   更新全部敵人
 ================================================== */
 
-function getCurrentOrcFootOffset() {
+function updateEnemies(
+  deltaTime
+) {
+  for (
+    const enemy of enemies
+  ) {
+    updateEnemy(
+      enemy,
+      deltaTime
+    );
+  }
+}
+
+/* ==================================================
+   取得目前敵人影格
+================================================== */
+
+function getCurrentEnemyFrame(
+  enemy
+) {
   const animation =
-    enemyAnimations[
-      orc.animation
-    ];
+    getEnemyAnimation(
+      enemy
+    );
 
   if (
     !animation ||
-    animation.footOffsets.length ===
+    animation.frames.length ===
       0
+  ) {
+    return null;
+  }
+
+  const safeFrameIndex =
+    Math.min(
+      enemy.frameIndex,
+      animation.frames.length -
+        1
+    );
+
+  return (
+    animation.frames[
+      safeFrameIndex
+    ] || null
+  );
+}
+
+/* ==================================================
+   取得敵人腳底 Offset
+================================================== */
+
+function getCurrentEnemyFootOffset(
+  enemy
+) {
+  const animation =
+    getEnemyAnimation(
+      enemy
+    );
+
+  if (
+    !animation ||
+    animation.footOffsets
+      .length === 0
   ) {
     return 0;
   }
 
   const safeFrameIndex =
     Math.min(
-      orc.frameIndex,
-      animation.footOffsets
+      enemy.frameIndex,
+      animation
+        .footOffsets
         .length -
         1
     );
@@ -365,38 +893,27 @@ function getCurrentOrcFootOffset() {
   return (
     animation.footOffsets[
       safeFrameIndex
-    ] ?? 0
+    ] || 0
   );
 }
 
 /* ==================================================
-   ORC 繪製
+   繪製單隻敵人
 ================================================== */
 
-function drawOrc() {
-  const animation =
-    enemyAnimations[
-      orc.animation
-    ];
-
+function drawEnemy(
+  enemy
+) {
   if (
-    !animation ||
-    animation.frames.length === 0
+    enemy.opacity <= 0
   ) {
     return;
   }
 
-  const safeFrameIndex =
-    Math.min(
-      orc.frameIndex,
-      animation.frames.length -
-        1
-    );
-
   const frame =
-    animation.frames[
-      safeFrameIndex
-    ];
+    getCurrentEnemyFrame(
+      enemy
+    );
 
   if (!frame) {
     return;
@@ -404,47 +921,49 @@ function drawOrc() {
 
   const screenX =
     worldToScreenX(
-      orc.x
+      enemy.x
     );
 
   if (
     screenX <
-      -ORC_DRAW_MARGIN ||
+      -ENEMY_DRAW_MARGIN ||
     screenX >
       VIEW_WIDTH +
-        ORC_DRAW_MARGIN
+        ENEMY_DRAW_MARGIN
   ) {
     return;
   }
 
   const sourceFootOffset =
-    getCurrentOrcFootOffset();
+    getCurrentEnemyFootOffset(
+      enemy
+    );
 
   const footOffsetY =
     (
       sourceFootOffset +
-      ORC_EXTRA_FOOT_OFFSET
+      enemy.extraFootOffset
     ) *
-    ENEMY_SCALE;
+    enemy.scale;
 
   const screenY =
     worldToScreenY(
-      orc.y
+      enemy.y
     ) +
     footOffsetY;
 
   const drawWidth =
     frame.width *
-    ENEMY_SCALE;
+    enemy.scale;
 
   const drawHeight =
     frame.height *
-    ENEMY_SCALE;
+    enemy.scale;
 
   context.save();
 
   context.globalAlpha =
-    orc.opacity;
+    enemy.opacity;
 
   context.translate(
     Math.round(
@@ -455,26 +974,28 @@ function drawOrc() {
     )
   );
 
-  /*
-    ORC 原始素材方向與玩家相反，
-    因此使用 -orc.facing。
-  */
   context.scale(
-    -orc.facing,
+    enemy.facing *
+      enemy
+        .spriteFacingMultiplier,
     1
   );
 
   context.drawImage(
     frame,
+
     Math.round(
       -drawWidth / 2
     ),
+
     Math.round(
       -drawHeight
     ),
+
     Math.round(
       drawWidth
     ),
+
     Math.round(
       drawHeight
     )
@@ -484,14 +1005,25 @@ function drawOrc() {
 }
 
 /* ==================================================
-   ORC 頭頂血條
+   敵人頭頂血條
 ================================================== */
 
-function drawOrcHealthBar() {
+function drawEnemyHealthBar(
+  enemy
+) {
   if (
-    orc.opacity <= 0 ||
-    orc.dead
+    enemy.dead ||
+    enemy.opacity <= 0
   ) {
+    return;
+  }
+
+  const frame =
+    getCurrentEnemyFrame(
+      enemy
+    );
+
+  if (!frame) {
     return;
   }
 
@@ -499,38 +1031,49 @@ function drawOrcHealthBar() {
   const height = 9;
 
   const sourceFootOffset =
-    getCurrentOrcFootOffset();
+    getCurrentEnemyFootOffset(
+      enemy
+    );
 
   const footOffsetY =
     (
       sourceFootOffset +
-      ORC_EXTRA_FOOT_OFFSET
+      enemy.extraFootOffset
     ) *
-    ENEMY_SCALE;
+    enemy.scale;
+
+  const drawHeight =
+    frame.height *
+    enemy.scale;
 
   const x =
-    worldToScreenX(orc.x) -
+    worldToScreenX(
+      enemy.x
+    ) -
     width / 2;
 
-  /*
-    血條位於 ORC 頭部上方約 4px。
-  */
   const y =
-    worldToScreenY(orc.y) +
+    worldToScreenY(
+      enemy.y
+    ) +
     footOffsetY -
-    64 * ENEMY_SCALE -
+    drawHeight -
     4;
 
-  const ratio =
-    orc.maxHp > 0
-      ? orc.hp /
-        orc.maxHp
+  const healthRatio =
+    enemy.maxHp > 0
+      ? clamp(
+          enemy.hp /
+            enemy.maxHp,
+          0,
+          1
+        )
       : 0;
 
   context.save();
 
   context.globalAlpha =
-    orc.opacity;
+    enemy.opacity;
 
   context.fillStyle =
     "rgba(0,0,0,0.75)";
@@ -558,9 +1101,56 @@ function drawOrcHealthBar() {
   context.fillRect(
     x,
     y,
-    width * ratio,
+    width *
+      healthRatio,
     height
   );
 
   context.restore();
+}
+
+/* ==================================================
+   繪製全部敵人
+================================================== */
+
+function drawEnemies() {
+  /*
+    先繪製全部敵人的地面陰影。
+  */
+  for (
+    const enemy of enemies
+  ) {
+    if (
+      enemy.opacity <= 0
+    ) {
+      continue;
+    }
+
+    drawEntityShadow(
+      enemy.x,
+      62,
+      13
+    );
+  }
+
+  /*
+    再繪製敵人與頭頂血條。
+  */
+  for (
+    const enemy of enemies
+  ) {
+    if (
+      enemy.opacity <= 0
+    ) {
+      continue;
+    }
+
+    drawEnemy(
+      enemy
+    );
+
+    drawEnemyHealthBar(
+      enemy
+    );
+  }
 }

@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>Hooded Escape V0.5.2</title>
+  <title>Hooded Escape V0.5.3</title>
 
   <style>
     * {
@@ -1005,7 +1005,7 @@
     context.imageSmoothingEnabled = false;
 
     /* ==================================================
-       世界與角色參數
+       世界設定
     ================================================== */
 
     const VIEW_WIDTH = 1280;
@@ -1023,18 +1023,6 @@
 
     const PLAYER_SCALE = 2.6;
     const ENEMY_SCALE = 2.3;
-
-    /*
-      ORC1 各動畫腳底 Anchor 補償。
-
-      數字為原始 64 × 64 圖片中的透明像素量，
-      最後會乘上 ENEMY_SCALE。
-    */
-    const ORC_FOOT_OFFSETS = {
-      idle: 6,
-      walk: 6,
-      attack: 6
-    };
 
     const CAMERA_FOLLOW_SPEED = 5.5;
 
@@ -1058,6 +1046,12 @@
     const ORC_PATROL_WAIT_TIME = 1;
 
     const ORC_DRAW_MARGIN = 260;
+
+    /*
+      腳底自動偵測後再額外補 1 原始像素，
+      讓腳掌略微壓在地面線上。
+    */
+    const ORC_EXTRA_FOOT_OFFSET = 1;
 
     /* ==================================================
        遊戲狀態
@@ -1094,7 +1088,9 @@
 
       grounded: true,
       ducking: false,
+
       attacking: false,
+      airAttacking: false,
 
       animation: "idle",
 
@@ -1108,6 +1104,12 @@
 
       velocityX: 0,
 
+      /*
+        1 代表世界右方。
+        -1 代表世界左方。
+
+        ORC 素材繪製時會反轉一次。
+      */
       facing: -1,
 
       animation: "idle",
@@ -1359,7 +1361,7 @@
     );
 
     /* ==================================================
-       素材載入
+       素材載入與腳底偵測
     ================================================== */
 
     function loadImage(path) {
@@ -1384,10 +1386,136 @@
       );
     }
 
+    function calculateSpriteFootOffset(image) {
+      const scanCanvas =
+        document.createElement("canvas");
+
+      scanCanvas.width =
+        image.naturalWidth ||
+        image.width;
+
+      scanCanvas.height =
+        image.naturalHeight ||
+        image.height;
+
+      const scanContext =
+        scanCanvas.getContext(
+          "2d",
+          {
+            willReadFrequently: true
+          }
+        );
+
+      if (!scanContext) {
+        return 0;
+      }
+
+      scanContext.clearRect(
+        0,
+        0,
+        scanCanvas.width,
+        scanCanvas.height
+      );
+
+      scanContext.drawImage(
+        image,
+        0,
+        0
+      );
+
+      let imageData;
+
+      try {
+        imageData =
+          scanContext.getImageData(
+            0,
+            0,
+            scanCanvas.width,
+            scanCanvas.height
+          );
+      } catch (error) {
+        console.warn(
+          "無法分析 Sprite Anchor：",
+          error
+        );
+
+        return 0;
+      }
+
+      /*
+        只掃描圖片中央區域。
+
+        避免攻擊動畫左右伸出的武器，
+        被誤判為角色腳底。
+      */
+      const startX =
+        Math.floor(
+          scanCanvas.width *
+          0.3
+        );
+
+      const endX =
+        Math.ceil(
+          scanCanvas.width *
+          0.7
+        );
+
+      let lowestOpaqueY = -1;
+
+      for (
+        let y =
+          scanCanvas.height - 1;
+        y >= 0;
+        y -= 1
+      ) {
+        let foundOpaquePixel = false;
+
+        for (
+          let x = startX;
+          x < endX;
+          x += 1
+        ) {
+          const alphaIndex =
+            (
+              y *
+              scanCanvas.width +
+              x
+            ) *
+              4 +
+            3;
+
+          if (
+            imageData.data[
+              alphaIndex
+            ] > 20
+          ) {
+            foundOpaquePixel = true;
+            break;
+          }
+        }
+
+        if (foundOpaquePixel) {
+          lowestOpaqueY = y;
+          break;
+        }
+      }
+
+      if (lowestOpaqueY < 0) {
+        return 0;
+      }
+
+      return (
+        scanCanvas.height -
+        1 -
+        lowestOpaqueY
+      );
+    }
+
     async function loadAnimationGroup(
       destination,
       definitions,
-      basePath
+      basePath,
+      analyzeFootOffsets = false
     ) {
       const tasks = [];
 
@@ -1397,8 +1525,11 @@
           definition
         ] of Object.entries(definitions)
       ) {
-        destination[animationName] = {
+        destination[
+          animationName
+        ] = {
           frames: [],
+          footOffsets: [],
 
           frameDuration:
             definition.frameDuration,
@@ -1409,7 +1540,8 @@
 
         for (
           let frameNumber = 1;
-          frameNumber <= definition.frameCount;
+          frameNumber <=
+            definition.frameCount;
           frameNumber += 1
         ) {
           const path =
@@ -1424,11 +1556,25 @@
           tasks.push(
             loadImage(path).then(
               (image) => {
+                const frameIndex =
+                  frameNumber - 1;
+
                 destination[
                   animationName
                 ].frames[
-                  frameNumber - 1
+                  frameIndex
                 ] = image;
+
+                destination[
+                  animationName
+                ].footOffsets[
+                  frameIndex
+                ] =
+                  analyzeFootOffsets
+                    ? calculateSpriteFootOffset(
+                        image
+                      )
+                    : 0;
               }
             )
           );
@@ -1443,13 +1589,15 @@
         loadAnimationGroup(
           playerAnimations,
           playerAnimationDefinitions,
-          "2D_Character"
+          "2D_Character",
+          false
         ),
 
         loadAnimationGroup(
           enemyAnimations,
           enemyAnimationDefinitions,
-          "2D_Enemy/ORC1"
+          "2D_Enemy/ORC1",
+          true
         )
       ]);
     }
@@ -1469,7 +1617,9 @@
         `${safeProgress}%`;
 
       progressNumber.textContent =
-        `${Math.floor(safeProgress)}%`;
+        `${Math.floor(
+          safeProgress
+        )}%`;
 
       if (message) {
         loadingMessage.textContent =
@@ -1517,13 +1667,17 @@
           );
 
           if (ratio < 1) {
-            requestAnimationFrame(update);
+            requestAnimationFrame(
+              update
+            );
           } else {
             resolve();
           }
         }
 
-        requestAnimationFrame(update);
+        requestAnimationFrame(
+          update
+        );
       });
     }
 
@@ -1555,7 +1709,7 @@
         62,
         82,
         850,
-        "正在載入地下城生物……"
+        "正在分析地下城生物……"
       );
 
       await wait(150);
@@ -1564,7 +1718,7 @@
         82,
         90,
         700,
-        "正在喚醒獸人守衛……"
+        "正在校正獸人腳底座標……"
       );
 
       setLoadingProgress(
@@ -1629,9 +1783,11 @@
 
       try {
         await Promise.all([
-          loadAllAnimations().then(() => {
-            assetsLoaded = true;
-          }),
+          loadAllAnimations().then(
+            () => {
+              assetsLoaded = true;
+            }
+          ),
 
           runFakeLoading()
         ]);
@@ -1778,12 +1934,17 @@
       animationName,
       restart = false
     ) {
-      if (!playerAnimations[animationName]) {
+      if (
+        !playerAnimations[
+          animationName
+        ]
+      ) {
         return;
       }
 
       if (
-        player.animation !== animationName ||
+        player.animation !==
+          animationName ||
         restart
       ) {
         player.animation =
@@ -1791,6 +1952,23 @@
 
         player.frameIndex = 0;
         player.frameTimer = 0;
+      }
+    }
+
+    function completePlayerAttack() {
+      player.attacking = false;
+      player.airAttacking = false;
+
+      if (player.grounded) {
+        setPlayerAnimation(
+          "idle",
+          true
+        );
+      } else {
+        setPlayerAnimation(
+          "jump",
+          true
+        );
       }
     }
 
@@ -1809,41 +1987,73 @@
         return;
       }
 
-      if (player.animation === "jump") {
+      /*
+        Jump 動畫依垂直速度選擇影格。
+
+        空中攻擊時 animation 是 attack，
+        不會進入這一段。
+      */
+      if (
+        player.animation ===
+        "jump"
+      ) {
         const lastFrame =
           animation.frames.length - 1;
 
-        if (player.velocityY < -520) {
+        if (
+          player.velocityY < -520
+        ) {
           player.frameIndex =
-            Math.min(1, lastFrame);
+            Math.min(
+              1,
+              lastFrame
+            );
         } else if (
           player.velocityY < -260
         ) {
           player.frameIndex =
-            Math.min(2, lastFrame);
+            Math.min(
+              2,
+              lastFrame
+            );
         } else if (
           player.velocityY < -60
         ) {
           player.frameIndex =
-            Math.min(3, lastFrame);
+            Math.min(
+              3,
+              lastFrame
+            );
         } else if (
           player.velocityY < 160
         ) {
           player.frameIndex =
-            Math.min(4, lastFrame);
+            Math.min(
+              4,
+              lastFrame
+            );
         } else if (
           player.velocityY < 380
         ) {
           player.frameIndex =
-            Math.min(5, lastFrame);
+            Math.min(
+              5,
+              lastFrame
+            );
         } else if (
           player.velocityY < 620
         ) {
           player.frameIndex =
-            Math.min(6, lastFrame);
+            Math.min(
+              6,
+              lastFrame
+            );
         } else {
           player.frameIndex =
-            Math.min(7, lastFrame);
+            Math.min(
+              7,
+              lastFrame
+            );
         }
 
         return;
@@ -1869,20 +2079,14 @@
             player.frameIndex = 0;
           } else {
             player.frameIndex =
-              animation.frames.length - 1;
+              animation.frames.length -
+              1;
 
             if (
               player.animation ===
               "attack"
             ) {
-              player.attacking = false;
-
-              setPlayerAnimation(
-                player.grounded
-                  ? "idle"
-                  : "jump",
-                true
-              );
+              completePlayerAttack();
             }
           }
         }
@@ -1890,19 +2094,24 @@
     }
 
     /* ==================================================
-       ORC1 動畫
+       ORC 動畫
     ================================================== */
 
     function setOrcAnimation(
       animationName,
       restart = false
     ) {
-      if (!enemyAnimations[animationName]) {
+      if (
+        !enemyAnimations[
+          animationName
+        ]
+      ) {
         return;
       }
 
       if (
-        orc.animation !== animationName ||
+        orc.animation !==
+          animationName ||
         restart
       ) {
         orc.animation =
@@ -1948,7 +2157,8 @@
             orc.frameIndex = 0;
           } else {
             orc.frameIndex =
-              animation.frames.length - 1;
+              animation.frames.length -
+              1;
 
             if (
               orc.animation ===
@@ -1996,18 +2206,8 @@
     }
 
     function triggerPlayerAttack() {
-      /*
-        V0.5.2 修正：
-
-        現階段沒有空中攻擊動畫，因此空中按攻擊時
-        直接忽略，不建立 attacking 狀態。
-
-        避免攻擊狀態被 Jump 動畫覆蓋後，
-        attacking 永遠無法在攻擊動畫結束時清除。
-      */
       if (
         !gameStarted ||
-        !player.grounded ||
         player.attacking ||
         player.ducking
       ) {
@@ -2015,7 +2215,19 @@
       }
 
       player.attacking = true;
-      player.velocityX = 0;
+
+      if (player.grounded) {
+        /*
+          地面攻擊停止移動。
+        */
+        player.airAttacking = false;
+        player.velocityX = 0;
+      } else {
+        /*
+          空中攻擊保留原本 X、Y 速度。
+        */
+        player.airAttacking = true;
+      }
 
       setPlayerAnimation(
         "attack",
@@ -2023,7 +2235,9 @@
       );
     }
 
-    function updatePlayer(deltaTime) {
+    function updatePlayer(
+      deltaTime
+    ) {
       if (!gameStarted) {
         if (assetsLoaded) {
           updatePlayerAnimation(
@@ -2043,29 +2257,7 @@
       if (pressed.attack) {
         triggerPlayerAttack();
 
-        /*
-          不論攻擊成功或因空中狀態被拒絕，
-          都立即消耗本次 Press，避免落地後自動補攻擊。
-        */
         pressed.attack = false;
-      }
-
-      /*
-        安全保護：
-
-        若未來其他流程讓玩家在空中意外保留 attacking，
-        立即清除並切回 Jump，避免操作永久鎖死。
-      */
-      if (
-        !player.grounded &&
-        player.attacking
-      ) {
-        player.attacking = false;
-
-        setPlayerAnimation(
-          "jump",
-          true
-        );
       }
 
       let horizontalDirection =
@@ -2089,7 +2281,9 @@
         joystick.active &&
         joystick.y >
           DUCK_THRESHOLD &&
-        Math.abs(joystick.x) < 0.55;
+        Math.abs(
+          joystick.x
+        ) < 0.55;
 
       player.ducking =
         (
@@ -2104,7 +2298,9 @@
         !player.ducking
       ) {
         if (
-          Math.abs(horizontalDirection) >
+          Math.abs(
+            horizontalDirection
+          ) >
           JOYSTICK_DEAD_ZONE
         ) {
           const shouldRun =
@@ -2143,7 +2339,17 @@
           }
         }
       } else {
-        player.velocityX = 0;
+        /*
+          地面攻擊與蹲下停止水平移動。
+
+          空中攻擊保留水平慣性，
+          不會在空中突然定住。
+        */
+        if (
+          !player.airAttacking
+        ) {
+          player.velocityX = 0;
+        }
 
         if (player.ducking) {
           setPlayerAnimation(
@@ -2157,9 +2363,16 @@
           GRAVITY *
           deltaTime;
 
-        setPlayerAnimation(
-          "jump"
-        );
+        /*
+          空中攻擊時不可被 Jump 動畫覆蓋。
+        */
+        if (
+          !player.airAttacking
+        ) {
+          setPlayerAnimation(
+            "jump"
+          );
+        }
       }
 
       player.x +=
@@ -2189,7 +2402,19 @@
         player.velocityY = 0;
         player.grounded = true;
 
-        if (wasAirborne) {
+        /*
+          如果空中攻擊尚未播完，
+          落地後繼續播放攻擊動畫。
+
+          攻擊結束後才回到 Idle。
+        */
+        if (
+          wasAirborne &&
+          !player.attacking
+        ) {
+          player.airAttacking =
+            false;
+
           setPlayerAnimation(
             "idle",
             true
@@ -2200,7 +2425,9 @@
       if (player.y < 100) {
         player.y = 100;
 
-        if (player.velocityY < 0) {
+        if (
+          player.velocityY < 0
+        ) {
           player.velocityY = 0;
         }
       }
@@ -2211,7 +2438,7 @@
     }
 
     /* ==================================================
-       ORC1 AI
+       ORC AI
     ================================================== */
 
     function startOrcAttack() {
@@ -2237,7 +2464,9 @@
       );
     }
 
-    function updateOrc(deltaTime) {
+    function updateOrc(
+      deltaTime
+    ) {
       if (!gameStarted) {
         if (assetsLoaded) {
           updateOrcAnimation(
@@ -2248,12 +2477,14 @@
         return;
       }
 
-      if (orc.attackCooldown > 0) {
+      if (
+        orc.attackCooldown > 0
+      ) {
         orc.attackCooldown =
           Math.max(
             0,
             orc.attackCooldown -
-            deltaTime
+              deltaTime
           );
       }
 
@@ -2271,7 +2502,9 @@
         player.x - orc.x;
 
       const distanceX =
-        Math.abs(differenceX);
+        Math.abs(
+          differenceX
+        );
 
       if (
         distanceX <=
@@ -2285,7 +2518,9 @@
             ? 1
             : -1;
 
-        if (orc.attackCooldown <= 0) {
+        if (
+          orc.attackCooldown <= 0
+        ) {
           startOrcAttack();
         } else {
           setOrcAnimation(
@@ -2316,12 +2551,14 @@
       } else {
         orc.state = "patrol";
 
-        if (orc.patrolWaitTimer > 0) {
+        if (
+          orc.patrolWaitTimer > 0
+        ) {
           orc.patrolWaitTimer =
             Math.max(
               0,
               orc.patrolWaitTimer -
-              deltaTime
+                deltaTime
             );
 
           orc.velocityX = 0;
@@ -2347,7 +2584,10 @@
         orc.velocityX *
         deltaTime;
 
-      if (orc.state === "patrol") {
+      if (
+        orc.state ===
+        "patrol"
+      ) {
         if (
           orc.x <=
           orc.patrolMinX
@@ -2356,6 +2596,7 @@
             orc.patrolMinX;
 
           orc.patrolDirection = 1;
+
           orc.patrolWaitTimer =
             ORC_PATROL_WAIT_TIME;
 
@@ -2373,6 +2614,7 @@
             orc.patrolMaxX;
 
           orc.patrolDirection = -1;
+
           orc.patrolWaitTimer =
             ORC_PATROL_WAIT_TIME;
 
@@ -2440,7 +2682,9 @@
         camera.targetY;
     }
 
-    function updateCamera(deltaTime) {
+    function updateCamera(
+      deltaTime
+    ) {
       calculateCameraTarget();
 
       const smoothing =
@@ -2552,7 +2796,8 @@
         row += 1
       ) {
         for (
-          let column = startColumn;
+          let column =
+            startColumn;
           column <= endColumn;
           column += 1
         ) {
@@ -2565,10 +2810,14 @@
             tileSize;
 
           const screenX =
-            worldToScreenX(worldX);
+            worldToScreenX(
+              worldX
+            );
 
           const screenY =
-            worldToScreenY(worldY);
+            worldToScreenY(
+              worldY
+            );
 
           const alternate =
             (
@@ -2584,8 +2833,12 @@
               : "rgba(0,0,0,0.025)";
 
           context.fillRect(
-            Math.floor(screenX),
-            Math.floor(screenY),
+            Math.floor(
+              screenX
+            ),
+            Math.floor(
+              screenY
+            ),
             tileSize + 1,
             tileSize + 1
           );
@@ -2594,8 +2847,12 @@
             "rgba(255,255,255,0.025)";
 
           context.strokeRect(
-            Math.floor(screenX),
-            Math.floor(screenY),
+            Math.floor(
+              screenX
+            ),
+            Math.floor(
+              screenY
+            ),
             tileSize,
             tileSize
           );
@@ -2605,10 +2862,22 @@
 
     function drawDungeonDecorations() {
       const pillars = [
-        { x: 760, y: 930 },
-        { x: 1200, y: 930 },
-        { x: 1660, y: 930 },
-        { x: 2140, y: 930 }
+        {
+          x: 760,
+          y: 930
+        },
+        {
+          x: 1200,
+          y: 930
+        },
+        {
+          x: 1660,
+          y: 930
+        },
+        {
+          x: 2140,
+          y: 930
+        }
       ];
 
       for (
@@ -2671,11 +2940,26 @@
       }
 
       const torches = [
-        { x: 520, y: 1040 },
-        { x: 980, y: 1040 },
-        { x: 1440, y: 1040 },
-        { x: 1900, y: 1040 },
-        { x: 2340, y: 1040 }
+        {
+          x: 520,
+          y: 1040
+        },
+        {
+          x: 980,
+          y: 1040
+        },
+        {
+          x: 1440,
+          y: 1040
+        },
+        {
+          x: 1900,
+          y: 1040
+        },
+        {
+          x: 2340,
+          y: 1040
+        }
       ];
 
       for (
@@ -2850,8 +3134,13 @@
     function drawEntityShadow(
       worldX,
       radiusX,
-      radiusY
+      radiusY,
+      visible = true
     ) {
+      if (!visible) {
+        return;
+      }
+
       const screenX =
         worldToScreenX(
           worldX
@@ -2904,7 +3193,8 @@
         animation.frames[
           Math.min(
             player.frameIndex,
-            animation.frames.length - 1
+            animation.frames.length -
+              1
           )
         ];
 
@@ -2933,8 +3223,12 @@
       context.save();
 
       context.translate(
-        Math.round(screenX),
-        Math.round(screenY)
+        Math.round(
+          screenX
+        ),
+        Math.round(
+          screenY
+        )
       );
 
       context.scale(
@@ -2961,6 +3255,35 @@
       context.restore();
     }
 
+    function getCurrentOrcFootOffset() {
+      const animation =
+        enemyAnimations[
+          orc.animation
+        ];
+
+      if (
+        !animation ||
+        animation.footOffsets.length ===
+          0
+      ) {
+        return 0;
+      }
+
+      const safeFrameIndex =
+        Math.min(
+          orc.frameIndex,
+          animation.footOffsets
+            .length -
+            1
+        );
+
+      return (
+        animation.footOffsets[
+          safeFrameIndex
+        ] ?? 0
+      );
+    }
+
     function drawOrc() {
       const animation =
         enemyAnimations[
@@ -2974,12 +3297,16 @@
         return;
       }
 
+      const safeFrameIndex =
+        Math.min(
+          orc.frameIndex,
+          animation.frames.length -
+            1
+        );
+
       const frame =
         animation.frames[
-          Math.min(
-            orc.frameIndex,
-            animation.frames.length - 1
-          )
+          safeFrameIndex
         ];
 
       if (!frame) {
@@ -2992,30 +3319,25 @@
         );
 
       if (
-        screenX < -ORC_DRAW_MARGIN ||
+        screenX <
+          -ORC_DRAW_MARGIN ||
         screenX >
           VIEW_WIDTH +
-          ORC_DRAW_MARGIN
+            ORC_DRAW_MARGIN
       ) {
         return;
       }
 
       const sourceFootOffset =
-        ORC_FOOT_OFFSETS[
-          orc.animation
-        ] ??
-        ORC_FOOT_OFFSETS.idle;
+        getCurrentOrcFootOffset();
 
       const footOffsetY =
-        sourceFootOffset *
+        (
+          sourceFootOffset +
+          ORC_EXTRA_FOOT_OFFSET
+        ) *
         ENEMY_SCALE;
 
-      /*
-        ORC 世界座標仍與玩家使用同一地面座標。
-
-        只有 Sprite 繪製位置向下補償，
-        AI、追蹤、攻擊距離與未來碰撞均不受影響。
-      */
       const screenY =
         worldToScreenY(
           orc.y
@@ -3033,12 +3355,16 @@
       context.save();
 
       context.translate(
-        Math.round(screenX),
-        Math.round(screenY)
+        Math.round(
+          screenX
+        ),
+        Math.round(
+          screenY
+        )
       );
 
       /*
-        ORC1 原圖預設朝向與玩家相反。
+        ORC 原始素材朝向與玩家相反。
       */
       context.scale(
         -orc.facing,
@@ -3083,8 +3409,8 @@
       context.fillRect(
         16,
         22,
-        304,
-        168
+        330,
+        194
       );
 
       context.fillStyle =
@@ -3100,7 +3426,11 @@
       );
 
       context.fillText(
-        `玩家：${Math.round(player.x)}, ${Math.round(player.y)}`,
+        `玩家：${Math.round(
+          player.x
+        )}, ${Math.round(
+          player.y
+        )}`,
         42,
         77
       );
@@ -3112,21 +3442,39 @@
       );
 
       context.fillText(
-        `相機：${Math.round(camera.x)}, ${Math.round(camera.y)}`,
+        `空中攻擊：${
+          player.airAttacking
+            ? "是"
+            : "否"
+        }`,
         42,
         129
       );
 
       context.fillText(
-        `ORC1：${stateNames[orc.state] || orc.state}`,
+        `相機：${Math.round(
+          camera.x
+        )}, ${Math.round(
+          camera.y
+        )}`,
         42,
         155
       );
 
       context.fillText(
-        `ORC Anchor：${ORC_FOOT_OFFSETS[orc.animation] ?? 6}px`,
+        `ORC1：${
+          stateNames[
+            orc.state
+          ] || orc.state
+        }`,
         42,
         181
+      );
+
+      context.fillText(
+        `ORC Anchor：${getCurrentOrcFootOffset()}px`,
+        42,
+        207
       );
 
       context.restore();
@@ -3149,15 +3497,39 @@
         drawEntityShadow(
           orc.x,
           62,
-          13
+          13,
+          true
         );
 
         drawOrc();
 
+        /*
+          玩家跳躍時陰影仍保留在地面，
+          但可依高度稍微縮小。
+        */
+        const playerHeight =
+          Math.max(
+            0,
+            WORLD_GROUND_Y -
+              player.y
+          );
+
+        const shadowScale =
+          clamp(
+            1 -
+              playerHeight /
+                700,
+            0.45,
+            1
+          );
+
         drawEntityShadow(
           player.x,
-          50,
-          12
+          50 *
+            shadowScale,
+          12 *
+            shadowScale,
+          true
         );
 
         drawPlayer();
@@ -3167,11 +3539,13 @@
     }
 
     /* ==================================================
-       鍵盤
+       鍵盤輸入
     ================================================== */
 
     function getControlFromKey(code) {
-      if (code === attackKeyCode) {
+      if (
+        code === attackKeyCode
+      ) {
         return "attack";
       }
 
@@ -3214,8 +3588,10 @@
         active &&
         isNewPress &&
         (
-          controlName === "jump" ||
-          controlName === "attack"
+          controlName ===
+            "jump" ||
+          controlName ===
+            "attack"
         )
       ) {
         pressed[
@@ -3253,7 +3629,9 @@
         setControl(
           controlName,
           true,
-          !input[controlName]
+          !input[
+            controlName
+          ]
         );
       }
     );
@@ -3280,7 +3658,7 @@
     );
 
     /* ==================================================
-       搖桿
+       虛擬搖桿
     ================================================== */
 
     function updateJoystickCenter() {
@@ -3330,11 +3708,15 @@
         );
 
       const visualX =
-        Math.cos(angle) *
+        Math.cos(
+          angle
+        ) *
         limitedDistance;
 
       const visualY =
-        Math.sin(angle) *
+        Math.sin(
+          angle
+        ) *
         limitedDistance;
 
       joystickStick.style.transform =
@@ -3356,13 +3738,17 @@
           : 0;
 
       joystick.x =
-        Math.abs(normalizedX) <
+        Math.abs(
+          normalizedX
+        ) <
         JOYSTICK_DEAD_ZONE
           ? 0
           : normalizedX;
 
       joystick.y =
-        Math.abs(normalizedY) <
+        Math.abs(
+          normalizedY
+        ) <
         JOYSTICK_DEAD_ZONE
           ? 0
           : normalizedY;
@@ -3490,7 +3876,9 @@
           setControl(
             controlName,
             true,
-            !input[controlName]
+            !input[
+              controlName
+            ]
           );
 
           if (
@@ -3592,9 +3980,12 @@
       () => {
         handleOrientationState();
 
-        window.setTimeout(() => {
-          updateJoystickCenter();
-        }, 100);
+        window.setTimeout(
+          () => {
+            updateJoystickCenter();
+          },
+          100
+        );
       }
     );
 
@@ -3603,10 +3994,13 @@
       () => {
         resetAllInputs();
 
-        window.setTimeout(() => {
-          handleOrientationState();
-          updateJoystickCenter();
-        }, 250);
+        window.setTimeout(
+          () => {
+            handleOrientationState();
+            updateJoystickCenter();
+          },
+          250
+        );
       }
     );
 
@@ -3614,7 +4008,9 @@
        遊戲循環
     ================================================== */
 
-    function gameLoop(currentTime) {
+    function gameLoop(
+      currentTime
+    ) {
       const rawDeltaTime =
         (
           currentTime -
@@ -3631,11 +4027,18 @@
       previousTime =
         currentTime;
 
-      updatePlayer(deltaTime);
-      updateOrc(deltaTime);
+      updatePlayer(
+        deltaTime
+      );
+
+      updateOrc(
+        deltaTime
+      );
 
       if (gameStarted) {
-        updateCamera(deltaTime);
+        updateCamera(
+          deltaTime
+        );
       }
 
       render();

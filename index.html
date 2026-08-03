@@ -1,73 +1,4995 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Hooded Escape V0.6</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}html,body{width:100%;height:100%;overflow:hidden;background:#07090e;touch-action:none;font-family:Arial,"Microsoft JhengHei",sans-serif}body{display:flex;align-items:center;justify-content:center}button,select{font:inherit}#game-wrapper{position:relative;width:min(100vw,calc(100vh*16/9));height:min(100vh,calc(100vw*9/16));max-width:1280px;max-height:720px;overflow:hidden;background:#111722}#game-canvas{display:block;width:100%;height:100%;background:#111722;image-rendering:pixelated;image-rendering:crisp-edges}
-#orientation-screen,#loading-page,#stage-intro,#fail-screen{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}#orientation-screen{z-index:500;background:radial-gradient(circle,#171d2a,#090c12 72%);color:#fff;opacity:0;visibility:hidden;pointer-events:none;transition:.65s}#orientation-screen.visible{opacity:1;visibility:visible;pointer-events:auto}.orientation-content{text-align:center}.phone-rotate-icon{width:74px;height:122px;border:4px solid #fff;border-radius:14px;margin:0 auto 24px;transform:rotate(-18deg)}.orientation-title{font-size:34px;font-weight:700}.orientation-subtitle{margin-top:10px;color:#aaa}
-#loading-page{z-index:400;background:radial-gradient(circle at 50% 42%,#303a50,#0e121c 48%,#07090e);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .8s,visibility .8s}#loading-page.prepared{visibility:visible}#loading-page.visible{opacity:1;visibility:visible;pointer-events:auto}#loading-page.game-entered{opacity:0;visibility:hidden;pointer-events:none}.loading-content{width:min(78%,560px);text-align:center}.logo-main{display:block;color:#f4f5f7;font-size:72px;font-weight:900;letter-spacing:12px}.logo-sub{display:block;color:#b9c1d1;letter-spacing:16px}.game-logo{margin-bottom:50px}.loading-text{display:flex;justify-content:space-between;color:#ddd;margin-bottom:12px}#progress-track{height:16px;border:1px solid #777;border-radius:999px;background:#0006;overflow:hidden}#progress-bar{height:100%;width:0;background:linear-gradient(90deg,#6f7f9e,#b6c0d4,#7585a4)}#loading-status.hidden{opacity:0}#enter-dungeon-button{margin-top:34px;padding:14px 32px;border:1px solid #aaa;border-radius:7px;background:#4b5870;color:#fff;font-weight:700;letter-spacing:3px;opacity:0;visibility:hidden}#enter-dungeon-button.visible{opacity:1;visibility:visible}
-#stage-intro{z-index:350;background:#0009;color:#fff;font-size:96px;font-weight:900;letter-spacing:18px;opacity:0;visibility:hidden;pointer-events:none}#stage-intro.visible{opacity:1;visibility:visible}#stage-intro.fade-out{opacity:0;transition:opacity .5s}
-#fail-screen{z-index:360;flex-direction:column;gap:24px;background:#000b;opacity:0;visibility:hidden;pointer-events:none;transition:.5s}#fail-screen.visible{opacity:1;visibility:visible;pointer-events:auto}#fail-title{color:#fff;font-size:90px;font-weight:900;letter-spacing:8px}#respawn-button{padding:14px 32px;border:1px solid #aaa;border-radius:8px;background:#4b5870;color:#fff;font-size:22px;font-weight:700;letter-spacing:3px}
-#desktop-help{position:absolute;top:18px;left:50%;z-index:20;transform:translateX(-50%);padding:10px 18px;background:#0008;color:#fff;border-radius:8px;opacity:0;visibility:hidden}#keyboard-settings{position:absolute;top:22px;right:24px;z-index:25;padding:8px 10px;background:#0008;color:#fff;border-radius:8px;opacity:0;visibility:hidden}body.game-started #desktop-help,body.game-started #keyboard-settings{opacity:1;visibility:visible}
-#touch-controls{position:absolute;inset:0;z-index:30;opacity:0;visibility:hidden;pointer-events:none}body.game-started.player-control-enabled #touch-controls{opacity:1;visibility:visible}#joystick-zone{position:absolute;left:24px;bottom:24px;width:150px;height:150px;pointer-events:auto}#joystick-base{position:relative;width:100%;height:100%;border:3px solid #ffffff40;border-radius:50%;background:#08101a80}#joystick-stick{position:absolute;left:50%;top:50%;width:48%;height:48%;border:3px solid #ffffff80;border-radius:50%;background:#ffffff2b;transform:translate(-50%,-50%)}#action-controls{position:absolute;right:24px;bottom:24px;display:flex;gap:20px;align-items:flex-end;pointer-events:auto}.action-button{width:86px;height:86px;border:3px solid #ffffff70;border-radius:50%;background:#08101a99;color:#fff;font-size:22px;font-weight:700}.action-button.active{transform:scale(.9)}#jump-button{margin-bottom:44px}@media(hover:hover) and (pointer:fine){#touch-controls{display:none}}@media(hover:none),(pointer:coarse),(max-width:900px){#desktop-help,#keyboard-settings{display:none}}
-</style>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  >
+
+  <title>Hooded Escape V0.6.1</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+
+      overflow: hidden;
+
+      background: #07090e;
+
+      touch-action: none;
+      overscroll-behavior: none;
+
+      font-family:
+        Arial,
+        "Microsoft JhengHei",
+        sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button,
+    select {
+      font: inherit;
+    }
+
+    /* ==================================================
+       遊戲容器
+    ================================================== */
+
+    #game-wrapper {
+      position: relative;
+
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+
+      max-width: 1280px;
+      max-height: 720px;
+
+      overflow: hidden;
+
+      background: #111722;
+    }
+
+    #game-canvas {
+      display: block;
+
+      width: 100%;
+      height: 100%;
+
+      background: #111722;
+
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* ==================================================
+       手機直向提示
+    ================================================== */
+
+    #orientation-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 500;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        radial-gradient(
+          circle at center,
+          #171d2a 0%,
+          #090c12 72%
+        );
+
+      color: #ffffff;
+
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+
+      transition:
+        opacity 0.65s ease,
+        visibility 0.65s ease;
+    }
+
+    #orientation-screen.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #orientation-screen.fade-out {
+      opacity: 0;
+      visibility: visible;
+      pointer-events: none;
+    }
+
+    .orientation-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      gap: 24px;
+      padding: 30px;
+
+      text-align: center;
+
+      animation:
+        orientationBreathe 2s ease-in-out infinite;
+    }
+
+    .phone-rotate-icon {
+      position: relative;
+
+      width: 74px;
+      height: 122px;
+
+      border: 4px solid rgba(255, 255, 255, 0.9);
+      border-radius: 14px;
+
+      transform: rotate(-18deg);
+
+      animation:
+        phoneRotate 2.2s ease-in-out infinite;
+    }
+
+    .phone-rotate-icon::before {
+      content: "";
+
+      position: absolute;
+      left: 50%;
+      bottom: 7px;
+
+      width: 8px;
+      height: 8px;
+
+      border-radius: 50%;
+
+      background: rgba(255, 255, 255, 0.9);
+
+      transform: translateX(-50%);
+    }
+
+    .phone-rotate-icon::after {
+      content: "↻";
+
+      position: absolute;
+      top: 50%;
+      left: 100%;
+
+      margin-left: 20px;
+
+      color: rgba(255, 255, 255, 0.85);
+
+      font-size: 46px;
+
+      transform: translateY(-50%);
+    }
+
+    .orientation-title {
+      font-size: clamp(24px, 6vw, 38px);
+      font-weight: 700;
+
+      letter-spacing: 2px;
+    }
+
+    .orientation-subtitle {
+      margin-top: 9px;
+
+      color: rgba(255, 255, 255, 0.65);
+
+      font-size: clamp(14px, 3.5vw, 18px);
+      line-height: 1.6;
+    }
+
+    @keyframes orientationBreathe {
+      0%,
+      100% {
+        opacity: 0.58;
+        transform: scale(0.96);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.04);
+      }
+    }
+
+    @keyframes phoneRotate {
+      0%,
+      100% {
+        transform: rotate(-18deg);
+      }
+
+      50% {
+        transform: rotate(72deg);
+      }
+    }
+
+    /* ==================================================
+       Loading Page
+    ================================================== */
+
+    #loading-page {
+      position: absolute;
+      inset: 0;
+      z-index: 400;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      overflow: hidden;
+
+      background:
+        radial-gradient(
+          circle at 50% 42%,
+          rgba(48, 58, 80, 0.62) 0%,
+          rgba(14, 18, 28, 0.98) 48%,
+          #07090e 100%
+        );
+
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+
+      transition:
+        opacity 0.8s ease,
+        visibility 0.8s ease;
+    }
+
+    #loading-page.prepared {
+      visibility: visible;
+    }
+
+    #loading-page.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #loading-page.game-entered {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #loading-page::before {
+      content: "";
+
+      position: absolute;
+      inset: 0;
+
+      opacity: 0.12;
+
+      background-image:
+        linear-gradient(
+          rgba(255, 255, 255, 0.04) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.04) 1px,
+          transparent 1px
+        );
+
+      background-size: 48px 48px;
+
+      animation:
+        loadingGridMove 10s linear infinite;
+    }
+
+    #loading-page::after {
+      content: "";
+
+      position: absolute;
+      left: 50%;
+      bottom: -130px;
+
+      width: 640px;
+      height: 260px;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          ellipse,
+          rgba(93, 111, 148, 0.25) 0%,
+          transparent 70%
+        );
+
+      transform: translateX(-50%);
+    }
+
+    @keyframes loadingGridMove {
+      from {
+        background-position: 0 0;
+      }
+
+      to {
+        background-position: 48px 48px;
+      }
+    }
+
+    .loading-content {
+      position: relative;
+      z-index: 2;
+
+      width: min(78%, 560px);
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      text-align: center;
+    }
+
+    .game-logo {
+      margin-bottom: 50px;
+
+      opacity: 0;
+
+      transform: translateY(18px);
+    }
+
+    #loading-page.visible .game-logo {
+      animation:
+        logoFadeIn 0.9s 0.2s ease forwards;
+    }
+
+    .logo-main {
+      display: block;
+
+      color: #f4f5f7;
+
+      font-size: clamp(42px, 7vw, 86px);
+      font-weight: 900;
+
+      letter-spacing: clamp(6px, 1.1vw, 14px);
+
+      text-shadow:
+        0 4px 0 rgba(0, 0, 0, 0.45),
+        0 12px 28px rgba(0, 0, 0, 0.6);
+    }
+
+    .logo-sub {
+      display: block;
+
+      margin-top: 4px;
+
+      color: rgba(199, 207, 225, 0.72);
+
+      font-size: clamp(13px, 1.8vw, 22px);
+      font-weight: 600;
+
+      letter-spacing: clamp(8px, 1.5vw, 18px);
+    }
+
+    @keyframes logoFadeIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #loading-status {
+      width: 100%;
+
+      opacity: 1;
+      transform: translateY(0);
+
+      transition:
+        opacity 0.4s ease,
+        transform 0.4s ease;
+    }
+
+    #loading-status.hidden {
+      opacity: 0;
+      transform: translateY(-10px);
+
+      pointer-events: none;
+    }
+
+    .loading-text {
+      margin-bottom: 12px;
+
+      display: flex;
+      justify-content: space-between;
+
+      gap: 18px;
+
+      color: rgba(255, 255, 255, 0.78);
+
+      font-size: clamp(13px, 1.8vw, 18px);
+      letter-spacing: 1px;
+    }
+
+    #loading-message {
+      text-align: left;
+    }
+
+    #progress-number {
+      min-width: 48px;
+
+      text-align: right;
+    }
+
+    #progress-track {
+      position: relative;
+
+      width: 100%;
+      height: clamp(12px, 1.7vw, 18px);
+
+      overflow: hidden;
+
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+
+      background: rgba(0, 0, 0, 0.36);
+    }
+
+    #progress-bar {
+      position: relative;
+
+      width: 0%;
+      height: 100%;
+
+      overflow: hidden;
+
+      border-radius: inherit;
+
+      background:
+        linear-gradient(
+          90deg,
+          #6f7f9e,
+          #b6c0d4,
+          #7585a4
+        );
+
+      box-shadow:
+        0 0 16px rgba(178, 193, 219, 0.38);
+
+      transition:
+        width 0.08s linear;
+    }
+
+    #progress-bar::after {
+      content: "";
+
+      position: absolute;
+      inset: 0 auto 0 0;
+
+      width: 120px;
+
+      background:
+        linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.55),
+          transparent
+        );
+
+      animation:
+        loadingShine 1.2s linear infinite;
+    }
+
+    @keyframes loadingShine {
+      from {
+        transform: translateX(-130px);
+      }
+
+      to {
+        transform: translateX(600px);
+      }
+    }
+
+    #enter-dungeon-button {
+      position: absolute;
+      top: calc(100% - 72px);
+
+      min-width: 230px;
+
+      padding: 15px 34px;
+
+      border: 1px solid rgba(255, 255, 255, 0.42);
+      border-radius: 7px;
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(104, 119, 149, 0.95),
+          rgba(48, 58, 80, 0.98)
+        );
+
+      color: #ffffff;
+
+      font-size: clamp(17px, 2.2vw, 24px);
+      font-weight: 700;
+
+      letter-spacing: 3px;
+
+      cursor: pointer;
+
+      opacity: 0;
+      visibility: hidden;
+
+      transform: translateY(16px);
+
+      box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.42);
+
+      transition:
+        opacity 0.65s ease,
+        transform 0.65s ease,
+        border-color 0.2s ease;
+    }
+
+    #enter-dungeon-button.visible {
+      opacity: 1;
+      visibility: visible;
+
+      transform: translateY(0);
+    }
+
+    #enter-dungeon-button:hover {
+      border-color: rgba(255, 255, 255, 0.8);
+    }
+
+    #enter-dungeon-button:active {
+      transform: scale(0.96);
+    }
+
+    /* ==================================================
+       Stage Intro
+    ================================================== */
+
+    #stage-intro {
+      position: absolute;
+      inset: 0;
+      z-index: 350;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: rgba(0, 0, 0, 0.58);
+
+      opacity: 0;
+      visibility: hidden;
+
+      pointer-events: none;
+    }
+
+    #stage-intro.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #stage-intro.fade-out {
+      opacity: 0;
+
+      transition:
+        opacity 0.5s ease;
+    }
+
+    #stage-intro-title {
+      color: #ffffff;
+
+      font-size: clamp(52px, 8vw, 104px);
+      font-weight: 900;
+
+      letter-spacing: clamp(9px, 1.8vw, 24px);
+
+      text-shadow:
+        0 4px 0 rgba(0, 0, 0, 0.55),
+        0 14px 36px rgba(0, 0, 0, 0.8);
+
+      opacity: 0;
+      transform: scale(0.88);
+    }
+
+    #stage-intro.visible #stage-intro-title {
+      animation:
+        stageTitleEnter 0.3s ease forwards;
+    }
+
+    @keyframes stageTitleEnter {
+      from {
+        opacity: 0;
+        transform: scale(0.88);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ==================================================
+       FAIL 畫面
+    ================================================== */
+
+    #fail-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 360;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+
+      gap: 24px;
+
+      background: rgba(0, 0, 0, 0.72);
+
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+
+      transition:
+        opacity 0.5s ease,
+        visibility 0.5s ease;
+    }
+
+    #fail-screen.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #fail-title {
+      color: #ffffff;
+
+      font-size: clamp(52px, 8vw, 100px);
+      font-weight: 900;
+
+      letter-spacing: 8px;
+
+      text-shadow:
+        0 6px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    #respawn-button {
+      min-width: 180px;
+
+      padding: 14px 30px;
+
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 8px;
+
+      background:
+        linear-gradient(
+          180deg,
+          #6b7892,
+          #364055
+        );
+
+      color: #ffffff;
+
+      font-size: 22px;
+      font-weight: 700;
+
+      letter-spacing: 3px;
+
+      cursor: pointer;
+    }
+
+    /* ==================================================
+       電腦版 HUD
+    ================================================== */
+
+    #desktop-help {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      z-index: 20;
+
+      transform: translateX(-50%);
+
+      padding: 10px 18px;
+
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+
+      background: rgba(0, 0, 0, 0.42);
+      color: rgba(255, 255, 255, 0.9);
+
+      font-size: 15px;
+      white-space: nowrap;
+
+      opacity: 0;
+      visibility: hidden;
+
+      pointer-events: none;
+
+      transition:
+        opacity 0.4s ease;
+    }
+
+    #keyboard-settings {
+      position: absolute;
+      top: 22px;
+      right: 24px;
+      z-index: 25;
+
+      display: flex;
+      align-items: center;
+
+      gap: 8px;
+
+      padding: 8px 10px;
+
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+
+      background: rgba(0, 0, 0, 0.42);
+      color: #ffffff;
+
+      font-size: 14px;
+
+      opacity: 0;
+      visibility: hidden;
+
+      transition:
+        opacity 0.4s ease;
+    }
+
+    #attack-key-select {
+      min-width: 58px;
+
+      padding: 5px 8px;
+
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 6px;
+
+      background: #1a202b;
+      color: #ffffff;
+    }
+
+    body.game-started #desktop-help,
+    body.game-started #keyboard-settings {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ==================================================
+       手機控制
+    ================================================== */
+
+    #touch-controls {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+
+      opacity: 0;
+      visibility: hidden;
+
+      pointer-events: none;
+
+      transition:
+        opacity 0.4s ease;
+    }
+
+    body.game-started.player-control-enabled #touch-controls {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #joystick-zone {
+      position: absolute;
+
+      left: max(24px, env(safe-area-inset-left));
+      bottom: max(24px, env(safe-area-inset-bottom));
+
+      width: clamp(120px, 15vw, 170px);
+      height: clamp(120px, 15vw, 170px);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    #joystick-base {
+      position: relative;
+
+      width: 100%;
+      height: 100%;
+
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      border-radius: 50%;
+
+      background: rgba(8, 11, 18, 0.43);
+
+      box-shadow:
+        inset 0 0 28px rgba(255, 255, 255, 0.04),
+        0 8px 20px rgba(0, 0, 0, 0.25);
+
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    #joystick-base::before,
+    #joystick-base::after {
+      content: "";
+
+      position: absolute;
+
+      background: rgba(255, 255, 255, 0.1);
+
+      pointer-events: none;
+    }
+
+    #joystick-base::before {
+      top: 50%;
+      left: 15%;
+      right: 15%;
+
+      height: 2px;
+
+      transform: translateY(-50%);
+    }
+
+    #joystick-base::after {
+      left: 50%;
+      top: 15%;
+      bottom: 15%;
+
+      width: 2px;
+
+      transform: translateX(-50%);
+    }
+
+    #joystick-stick {
+      position: absolute;
+
+      left: 50%;
+      top: 50%;
+
+      width: 48%;
+      height: 48%;
+
+      border: 3px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+
+      background: rgba(255, 255, 255, 0.17);
+
+      transform: translate(-50%, -50%);
+
+      box-shadow:
+        0 6px 18px rgba(0, 0, 0, 0.28);
+
+      pointer-events: none;
+    }
+
+    #joystick-zone.active #joystick-stick {
+      background: rgba(255, 255, 255, 0.28);
+      border-color: rgba(255, 255, 255, 0.75);
+    }
+
+    #action-controls {
+      position: absolute;
+
+      right: max(24px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
+
+      display: flex;
+      align-items: flex-end;
+
+      gap: clamp(14px, 1.8vw, 24px);
+
+      pointer-events: auto;
+    }
+
+    .action-button {
+      width: clamp(64px, 7.8vw, 94px);
+      height: clamp(64px, 7.8vw, 94px);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border: 3px solid rgba(255, 255, 255, 0.42);
+      border-radius: 50%;
+
+      background: rgba(8, 11, 18, 0.55);
+      color: #ffffff;
+
+      font-size: clamp(17px, 2vw, 25px);
+      font-weight: 700;
+
+      box-shadow:
+        0 7px 20px rgba(0, 0, 0, 0.3);
+
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+
+      touch-action: none;
+    }
+
+    .action-button.active {
+      transform: scale(0.9);
+
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.8);
+    }
+
+    #jump-button {
+      margin-bottom: clamp(32px, 4vw, 54px);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      #touch-controls {
+        display: none;
+      }
+    }
+
+    @media (hover: none), (pointer: coarse) {
+      #desktop-help,
+      #keyboard-settings {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) {
+      #desktop-help,
+      #keyboard-settings {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .orientation-content,
+      .phone-rotate-icon,
+      #loading-page::before,
+      #progress-bar::after {
+        animation: none;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<main id="game-wrapper">
-<canvas id="game-canvas" width="1280" height="720" tabindex="0"></canvas>
-<section id="orientation-screen"><div class="orientation-content"><div class="phone-rotate-icon"></div><div class="orientation-title">請將手機轉為橫向</div><div class="orientation-subtitle">橫向模式可獲得最佳遊戲體驗</div></div></section>
-<section id="loading-page"><div class="loading-content"><div class="game-logo"><span class="logo-main">HOODED</span><span class="logo-sub">ESCAPE</span></div><div id="loading-status"><div class="loading-text"><span id="loading-message">正在確認地下城入口……</span><span id="progress-number">0%</span></div><div id="progress-track"><div id="progress-bar"></div></div></div><button id="enter-dungeon-button">進入地下城</button></div></section>
-<section id="stage-intro"><div>STAGE 1</div></section>
-<section id="fail-screen"><div id="fail-title">FAIL !!!</div><button id="respawn-button">重生</button></section>
-<div id="desktop-help">A／D 移動｜W／空白鍵跳躍｜S 蹲下｜Shift 跑步｜攻擊：<span id="attack-key-label">Z</span></div>
-<div id="keyboard-settings">攻擊鍵 <select id="attack-key-select"><option value="KeyZ">Z</option><option value="KeyX">X</option><option value="KeyC">C</option><option value="KeyV">V</option><option value="KeyJ">J</option><option value="KeyK">K</option><option value="KeyL">L</option></select></div>
-<div id="touch-controls"><div id="joystick-zone"><div id="joystick-base"><div id="joystick-stick"></div></div></div><div id="action-controls"><button class="action-button" data-control="attack">攻</button><button id="jump-button" class="action-button" data-control="jump">跳</button></div></div>
-</main>
-<script>
-"use strict";
-const $=id=>document.getElementById(id),canvas=$("game-canvas"),ctx=canvas.getContext("2d"),orientationScreen=$("orientation-screen"),loadingPage=$("loading-page"),loadingStatus=$("loading-status"),loadingMessage=$("loading-message"),progressBar=$("progress-bar"),progressNumber=$("progress-number"),enterButton=$("enter-dungeon-button"),stageIntro=$("stage-intro"),failScreen=$("fail-screen"),respawnButton=$("respawn-button"),attackKeySelect=$("attack-key-select"),attackKeyLabel=$("attack-key-label"),joystickZone=$("joystick-zone"),joystickBase=$("joystick-base"),joystickStick=$("joystick-stick");ctx.imageSmoothingEnabled=false;
-const VW=1280,VH=720,WW=2560,WH=1440,GROUND=1240,GRAVITY=2200,WALK=230,RUN=420,JUMP=820,PLAYER_SCALE=2.6,ENEMY_SCALE=2.3,CAMERA_SPEED=5.5,ORC_EXTRA_FOOT_OFFSET=4;
-const PLAYER_LEVEL=1,ORC_LEVEL=1,PLAYER_BASE_HP=100,PLAYER_HP_PER_LEVEL=20,ORC_MAX_HP=100,PLAYER_DAMAGE=25,ORC_DAMAGE=18,CONTACT_DAMAGE=10,PLAYER_IFRAME=.5,KNOCKBACK=6,ORC_FADE=.55;
-const ORC_PATROL_SPEED=72,ORC_CHASE_SPEED=112,ORC_DETECTION=390,ORC_ATTACK_RANGE=105,ORC_COOLDOWN=1.1;
-let assetsLoaded=false,fakeLoadingCompleted=false,loadingStarted=false,gameStarted=false,playerControl=false,stagePlaying=false,gameFailed=false,last=performance.now();
-const camera={x:0,y:0,tx:0,ty:0};
-const player={spawnX:340,x:340,y:GROUND,vx:0,vy:0,facing:1,grounded:true,ducking:false,attacking:false,airAttacking:false,animation:"idle",frame:0,timer:0,level:PLAYER_LEVEL,maxHp:PLAYER_BASE_HP+(PLAYER_LEVEL-1)*PLAYER_HP_PER_LEVEL,hp:PLAYER_BASE_HP,iframe:0,hitDone:false};
-const orc={spawnX:1100,x:1100,y:GROUND,vx:0,facing:-1,animation:"idle",frame:0,timer:0,state:"patrol",attacking:false,cooldown:0,patrolMin:850,patrolMax:1500,patrolDir:-1,patrolWait:0,level:ORC_LEVEL,maxHp:ORC_MAX_HP,hp:ORC_MAX_HP,hitDone:false,dead:false,opacity:1,fade:0};
-const input={left:false,right:false,run:false,duck:false,jump:false,attack:false},pressed={jump:false,attack:false},joy={active:false,id:null,cx:0,cy:0,r:0,x:0,y:0,m:0};
-const pDefs={idle:["Idle","idle",2,.42,true],walk:["Walk","Walk",4,.13,true],run:["Run","Run",8,.075,true],duck:["Duck","Duck",6,.08,false],jump:["Jump","Jump",8,.09,false],attack:["ATK","ATK",8,.065,false]},oDefs={idle:["Idle","Idle",4,.19,true],walk:["Walk","Walk",6,.12,true],attack:["ATK","ATK",8,.085,false]},pAnims={},oAnims={};
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),wait=ms=>new Promise(r=>setTimeout(r,ms)),paint=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))),w2x=x=>x-camera.x,w2y=y=>y-camera.y,intersect=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
-function isTouchDevice(){return window.matchMedia("(pointer: coarse)").matches||window.matchMedia("(hover: none)").matches||("ontouchstart" in window)}
-function loadImage(src){return new Promise((res,rej)=>{const i=new Image;i.onload=()=>res(i);i.onerror=()=>rej(new Error(src));i.src=src})}
-function footOffset(img){const c=document.createElement("canvas");c.width=img.width;c.height=img.height;const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0);const d=x.getImageData(0,0,c.width,c.height),sx=Math.floor(c.width*.3),ex=Math.ceil(c.width*.7);for(let y=c.height-1;y>=0;y--)for(let xx=sx;xx<ex;xx++)if(d.data[(y*c.width+xx)*4+3]>20)return c.height-1-y;return 0}
-async function loadGroup(dst,defs,base,scan=false){const jobs=[];for(const [name,d] of Object.entries(defs)){dst[name]={frames:[],foot:[],duration:d[3],loop:d[4]};for(let n=1;n<=d[2];n++){const src=`${base}/${d[0]}/${d[1]}${String(n).padStart(2,"0")}.png`;jobs.push(loadImage(src).then(img=>{dst[name].frames[n-1]=img;dst[name].foot[n-1]=scan?footOffset(img):0}))}}await Promise.all(jobs)}
-async function loadAll(){await Promise.all([loadGroup(pAnims,pDefs,"2D_Character"),loadGroup(oAnims,oDefs,"2D_Enemy/ORC1",true)])}
-function setProgress(p,m){progressBar.style.width=p+"%";progressNumber.textContent=Math.floor(p)+"%";loadingMessage.textContent=m}function animateProgress(a,b,d,m){return new Promise(r=>{const s=performance.now();function f(t){const q=Math.min((t-s)/d,1),e=1-(1-q)**2;setProgress(a+(b-a)*e,m);q<1?requestAnimationFrame(f):r()}requestAnimationFrame(f)})}
-async function startLoading(){if(loadingStarted)return;loadingStarted=true;loadingPage.classList.add("prepared");await paint();loadingPage.classList.add("visible");try{await Promise.all([loadAll().then(()=>assetsLoaded=true),(async()=>{await animateProgress(0,30,850,"正在確認地下城入口……");await animateProgress(30,62,950,"正在喚醒兜帽旅人……");await animateProgress(62,82,850,"正在分析地下城生物……");await animateProgress(82,100,1000,"正在建立戰鬥系統……");fakeLoadingCompleted=true})()]);loadingStatus.classList.add("hidden");setTimeout(()=>enterButton.classList.add("visible"),300)}catch(e){console.error(e);loadingMessage.textContent="素材載入失敗"}}
-async function playStage(){if(stagePlaying)return;stagePlaying=true;playerControl=false;document.body.classList.remove("player-control-enabled");resetInputs();stageIntro.classList.add("visible");await paint();await wait(500);stageIntro.classList.add("fade-out");await wait(500);stageIntro.classList.remove("visible","fade-out");playerControl=true;stagePlaying=false;document.body.classList.add("player-control-enabled");canvas.focus()}
-async function startGame(){if(gameStarted||!assetsLoaded||!fakeLoadingCompleted)return;gameStarted=true;document.body.classList.add("game-started");loadingPage.classList.add("game-entered");snapCamera();await wait(850);await playStage()}enterButton.onclick=startGame;
-function setP(name,restart=false){if(player.animation!==name||restart){player.animation=name;player.frame=0;player.timer=0;if(name==="attack")player.hitDone=false}}function setO(name,restart=false){if(orc.animation!==name||restart){orc.animation=name;orc.frame=0;orc.timer=0;if(name==="attack")orc.hitDone=false}}
-function updatePAnim(dt){const a=pAnims[player.animation];if(player.animation==="jump"){const l=a.frames.length-1;player.frame=player.vy<-520?1:player.vy<-260?2:player.vy<-60?3:player.vy<160?4:player.vy<380?5:player.vy<620?6:7;player.frame=Math.min(player.frame,l);return}player.timer+=dt;while(player.timer>=a.duration){player.timer-=a.duration;player.frame++;if(player.frame>=a.frames.length){if(a.loop)player.frame=0;else{player.frame=a.frames.length-1;if(player.animation==="attack"){player.attacking=false;player.airAttacking=false;setP(player.grounded?"idle":"jump",true)}}}}}
-function updateOAnim(dt){const a=oAnims[orc.animation];orc.timer+=dt;while(orc.timer>=a.duration){orc.timer-=a.duration;orc.frame++;if(orc.frame>=a.frames.length){if(a.loop)orc.frame=0;else{orc.frame=a.frames.length-1;if(orc.animation==="attack"){orc.attacking=false;orc.cooldown=ORC_COOLDOWN;setO("idle",true)}}}}}
-const pHurt=()=>({x:player.x-21,y:player.y-(player.ducking?48:72),w:42,h:player.ducking?48:72}),oHurt=()=>({x:orc.x-36,y:orc.y-105,w:72,h:105});
-function pHit(){if(!player.attacking||player.frame<3||player.frame>5)return null;return{x:player.facing===1?player.x+38:player.x-108,y:player.y-66,w:70,h:58}}function oHit(){if(orc.dead||!orc.attacking||orc.frame<3||orc.frame>5)return null;return{x:orc.facing===1?orc.x+42:orc.x-128,y:orc.y-79,w:86,h:75}}
-function hurtPlayer(d){if(gameFailed||player.iframe>0)return;player.hp=Math.max(0,player.hp-d);player.iframe=PLAYER_IFRAME;if(player.hp<=0)fail()}function hurtOrc(d){if(orc.dead)return;orc.hp=Math.max(0,orc.hp-d);if(orc.hp<=0){orc.dead=true;orc.attacking=false;orc.vx=0;orc.state="dead"}}
-function combat(){if(!playerControl||gameFailed||orc.dead)return;const ph=pHit();if(ph&&!player.hitDone&&intersect(ph,oHurt())){player.hitDone=true;hurtOrc(PLAYER_DAMAGE)}const oh=oHit();if(oh&&!orc.hitDone&&intersect(oh,pHurt())){orc.hitDone=true;hurtPlayer(ORC_DAMAGE)}if(intersect(pHurt(),oHurt())){const dir=player.x<orc.x?-1:1;player.x=clamp(player.x+dir*KNOCKBACK,52,WW-52);if(player.level>orc.level)orc.x=clamp(orc.x-dir*KNOCKBACK,80,WW-80);hurtPlayer(CONTACT_DAMAGE)}}
-function jump(){if(!player.grounded||player.attacking||player.ducking)return;player.grounded=false;player.vy=-JUMP;setP("jump",true)}function attack(){if(player.attacking||player.ducking)return;player.attacking=true;player.airAttacking=!player.grounded;if(player.grounded)player.vx=0;setP("attack",true)}
-function updatePlayer(dt){if(!gameStarted){if(assetsLoaded)updatePAnim(dt);return}if(!playerControl||gameFailed){player.vx=0;setP("idle");updatePAnim(dt);return}if(player.iframe>0)player.iframe=Math.max(0,player.iframe-dt);if(pressed.jump){jump();pressed.jump=false}if(pressed.attack){attack();pressed.attack=false}let dir=+input.right-+input.left,str=Math.abs(dir);if(joy.active){dir=joy.x;str=joy.m}player.ducking=(input.duck||(joy.active&&joy.y>.62&&Math.abs(joy.x)<.55))&&player.grounded&&!player.attacking;if(!player.attacking&&!player.ducking){if(Math.abs(dir)>.14){const r=input.run||str>=.72;player.vx=dir*(r?RUN:WALK);player.facing=dir>0?1:-1;if(player.grounded)setP(r?"run":"walk")}else{player.vx=0;if(player.grounded)setP("idle")}}else if(!player.airAttacking)player.vx=0;if(player.ducking)setP("duck");if(!player.grounded){player.vy+=GRAVITY*dt;if(!player.airAttacking)setP("jump")}player.x=clamp(player.x+player.vx*dt,52,WW-52);player.y+=player.vy*dt;if(player.y>=GROUND){const air=!player.grounded;player.y=GROUND;player.vy=0;player.grounded=true;if(air&&!player.attacking)setP("idle",true)}updatePAnim(dt)}
-function startOrcAttack(){orc.attacking=true;orc.state="attack";orc.vx=0;orc.facing=player.x>=orc.x?1:-1;setO("attack",true)}function updateOrc(dt){if(!gameStarted){if(assetsLoaded)updateOAnim(dt);return}if(orc.dead){orc.fade+=dt;orc.opacity=clamp(1-orc.fade/ORC_FADE,0,1);return}if(!playerControl||gameFailed){orc.vx=0;setO("idle");updateOAnim(dt);return}if(orc.cooldown>0)orc.cooldown=Math.max(0,orc.cooldown-dt);if(orc.attacking){updateOAnim(dt);return}const dx=player.x-orc.x,d=Math.abs(dx);if(d<=ORC_ATTACK_RANGE){orc.facing=dx>=0?1:-1;orc.vx=0;orc.state="attack";orc.cooldown<=0?startOrcAttack():setO("idle")}else if(d<=ORC_DETECTION){orc.state="chase";orc.facing=dx>=0?1:-1;orc.vx=orc.facing*ORC_CHASE_SPEED;setO("walk")}else{orc.state="patrol";orc.vx=orc.patrolDir*ORC_PATROL_SPEED;orc.facing=orc.patrolDir;setO("walk")}orc.x+=orc.vx*dt;if(orc.state==="patrol"&&orc.x<=orc.patrolMin){orc.x=orc.patrolMin;orc.patrolDir=1}else if(orc.state==="patrol"&&orc.x>=orc.patrolMax){orc.x=orc.patrolMax;orc.patrolDir=-1}updateOAnim(dt)}
-function fail(){gameFailed=true;playerControl=false;document.body.classList.remove("player-control-enabled");resetInputs();failScreen.classList.add("visible")}async function respawn(){failScreen.classList.remove("visible");gameFailed=false;player.x=player.spawnX;player.y=GROUND;player.vx=player.vy=0;player.grounded=true;player.hp=player.maxHp;player.iframe=0;player.attacking=false;setP("idle",true);orc.x=orc.spawnX;orc.hp=orc.maxHp;orc.dead=false;orc.opacity=1;orc.fade=0;orc.attacking=false;orc.state="patrol";setO("idle",true);snapCamera();await playStage()}respawnButton.onclick=respawn;
-function snapCamera(){camera.tx=clamp(player.x-VW*.42,0,WW-VW);camera.ty=clamp(player.y-VH*.58,0,WH-VH);camera.x=camera.tx;camera.y=camera.ty}function updateCamera(dt){camera.tx=clamp(player.x-VW*.42,0,WW-VW);camera.ty=clamp(player.y-VH*.58,0,WH-VH);const s=1-Math.exp(-CAMERA_SPEED*dt);camera.x+= (camera.tx-camera.x)*s;camera.y+=(camera.ty-camera.y)*s}
-function background(){const g=ctx.createLinearGradient(0,0,0,VH);g.addColorStop(0,"#252e40");g.addColorStop(1,"#111722");ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH)}function world(){const size=96;for(let r=Math.floor(camera.y/size);r<=Math.ceil((camera.y+VH)/size);r++)for(let c=Math.floor(camera.x/size);c<=Math.ceil((camera.x+VW)/size);c++){ctx.fillStyle=(r+c)%2?"#00000008":"#ffffff05";ctx.fillRect(Math.floor(w2x(c*size)),Math.floor(w2y(r*size)),size+1,size+1)}ctx.fillStyle="#303846";ctx.fillRect(0,w2y(GROUND),VW,VH-w2y(GROUND));ctx.fillStyle="#697588";ctx.fillRect(0,w2y(GROUND),VW,5)}
-function shadow(x,rx,ry){ctx.save();ctx.globalAlpha=.25;ctx.fillStyle="#000";ctx.beginPath();ctx.ellipse(w2x(x),w2y(GROUND)+5,rx,ry,0,0,Math.PI*2);ctx.fill();ctx.restore()}function sprite(img,x,y,s,f,a=1){ctx.save();ctx.globalAlpha=a;ctx.translate(x,y);ctx.scale(f,1);ctx.drawImage(img,-img.width*s/2,-img.height*s,img.width*s,img.height*s);ctx.restore()}
-function drawPlayer(){const a=pAnims[player.animation],img=a.frames[Math.min(player.frame,a.frames.length-1)],alpha=player.iframe>0&&Math.floor(player.iframe*20)%2===0?.4:1;sprite(img,w2x(player.x),w2y(player.y),PLAYER_SCALE,player.facing,alpha)}function orcFoot(){const a=oAnims[orc.animation];return (a.foot[Math.min(orc.frame,a.foot.length-1)]||0)+ORC_EXTRA_FOOT_OFFSET}function drawOrc(){if(orc.opacity<=0)return;const a=oAnims[orc.animation],img=a.frames[Math.min(orc.frame,a.frames.length-1)];sprite(img,w2x(orc.x),w2y(orc.y)+orcFoot()*ENEMY_SCALE,ENEMY_SCALE,-orc.facing,orc.opacity)}
-function playerHud(){const x=22,y=22,w=170+(player.level-1)*18,r=player.hp/player.maxHp;ctx.fillStyle="#000a";ctx.fillRect(x-8,y-8,w+16,54);ctx.fillStyle="#fff";ctx.font="bold 16px Arial";ctx.fillText(`LV.${player.level}  HP ${player.hp} / ${player.maxHp}`,x,y+15);ctx.fillStyle="#3b2025";ctx.fillRect(x,y+22,w,22);ctx.fillStyle="#b84552";ctx.fillRect(x,y+22,w*r,22)}function orcHud(){if(orc.dead)return;const w=96,x=w2x(orc.x)-w/2,y=w2y(orc.y)-ENEMY_SCALE*64-4+orcFoot()*ENEMY_SCALE;ctx.fillStyle="#000b";ctx.fillRect(x-1,y-1,w+2,11);ctx.fillStyle="#3c2024";ctx.fillRect(x,y,w,9);ctx.fillStyle="#b84a54";ctx.fillRect(x,y,w*(orc.hp/orc.maxHp),9)}function debug(){ctx.fillStyle="#0008";ctx.fillRect(14,82,300,150);ctx.fillStyle="#fff";ctx.font="16px Arial";[`玩家 ${Math.round(player.x)},${Math.round(player.y)}`,`玩家動作 ${player.animation}`,`玩家無敵 ${player.iframe.toFixed(2)}s`,`ORC ${orc.state}`,`ORC HP ${orc.hp}/${orc.maxHp}`].forEach((t,i)=>ctx.fillText(t,22,105+i*24))}
-function render(){ctx.clearRect(0,0,VW,VH);background();world();if(assetsLoaded){if(orc.opacity>0){shadow(orc.x,62,13);drawOrc();orcHud()}shadow(player.x,50,12);drawPlayer()}playerHud();if(gameStarted)debug()}
-const controls={ArrowLeft:"left",KeyA:"left",ArrowRight:"right",KeyD:"right",ArrowUp:"jump",KeyW:"jump",Space:"jump",ArrowDown:"duck",KeyS:"duck",ShiftLeft:"run",ShiftRight:"run"};let attackKey=localStorage.getItem("hoodedCharacterAttackKey")||"KeyZ";attackKeySelect.value=attackKey;attackKeyLabel.textContent=attackKey.replace("Key","");attackKeySelect.onchange=()=>{attackKey=attackKeySelect.value;localStorage.setItem("hoodedCharacterAttackKey",attackKey);attackKeyLabel.textContent=attackKey.replace("Key","")};function setControl(c,v,n=false){if(n&&(c==="jump"||c==="attack"))pressed[c]=true;input[c]=v}addEventListener("keydown",e=>{if(!playerControl||gameFailed)return;const c=e.code===attackKey?"attack":controls[e.code];if(!c)return;e.preventDefault();setControl(c,true,!input[c])});addEventListener("keyup",e=>{const c=e.code===attackKey?"attack":controls[e.code];if(c)setControl(c,false)});
-function joyCenter(){const r=joystickBase.getBoundingClientRect();joy.cx=r.left+r.width/2;joy.cy=r.top+r.height/2;joy.r=r.width*.34}function joyMove(e){const dx=e.clientX-joy.cx,dy=e.clientY-joy.cy,d=Math.hypot(dx,dy),l=Math.min(d,joy.r),a=Math.atan2(dy,dx),x=Math.cos(a)*l,y=Math.sin(a)*l;joystickStick.style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;joy.x=x/joy.r;joy.y=y/joy.r;joy.m=Math.min(1,Math.hypot(joy.x,joy.y))}function resetJoy(){joy.active=false;joy.x=joy.y=joy.m=0;joystickStick.style.transform="translate(-50%,-50%)"}joystickZone.onpointerdown=e=>{if(!playerControl)return;joyCenter();joy.active=true;joy.id=e.pointerId;joyMove(e)};joystickZone.onpointermove=e=>{if(joy.active&&e.pointerId===joy.id)joyMove(e)};joystickZone.onpointerup=joystickZone.onpointercancel=resetJoy;document.querySelectorAll(".action-button").forEach(b=>{const c=b.dataset.control;b.onpointerdown=e=>{if(!playerControl)return;b.classList.add("active");setControl(c,true,!input[c])};b.onpointerup=b.onpointercancel=()=>{b.classList.remove("active");setControl(c,false)}});function resetInputs(){Object.keys(input).forEach(k=>input[k]=false);pressed.jump=pressed.attack=false;resetJoy()}
-function loop(t){const dt=Math.min((t-last)/1000,1/30);last=t;updatePlayer(dt);updateOrc(dt);combat();if(gameStarted)updateCamera(dt);render();requestAnimationFrame(loop)}
-if(isTouchDevice()&&innerHeight>innerWidth)orientationScreen.classList.add("visible");else startLoading();requestAnimationFrame(loop);
-</script>
+  <main id="game-wrapper">
+    <canvas
+      id="game-canvas"
+      width="1280"
+      height="720"
+      tabindex="0"
+    ></canvas>
+
+    <section
+      id="orientation-screen"
+      aria-label="請旋轉手機"
+    >
+      <div class="orientation-content">
+        <div
+          class="phone-rotate-icon"
+          aria-hidden="true"
+        ></div>
+
+        <div>
+          <div class="orientation-title">
+            請將手機轉為橫向
+          </div>
+
+          <div class="orientation-subtitle">
+            橫向模式可獲得最佳遊戲體驗
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section
+      id="loading-page"
+      aria-label="遊戲載入畫面"
+    >
+      <div class="loading-content">
+        <div class="game-logo">
+          <span class="logo-main">
+            HOODED
+          </span>
+
+          <span class="logo-sub">
+            ESCAPE
+          </span>
+        </div>
+
+        <div id="loading-status">
+          <div class="loading-text">
+            <span id="loading-message">
+              正在確認地下城入口……
+            </span>
+
+            <span id="progress-number">
+              0%
+            </span>
+          </div>
+
+          <div id="progress-track">
+            <div id="progress-bar"></div>
+          </div>
+        </div>
+
+        <button
+          id="enter-dungeon-button"
+          type="button"
+        >
+          進入地下城
+        </button>
+      </div>
+    </section>
+
+    <section
+      id="stage-intro"
+      aria-label="關卡開始"
+    >
+      <div id="stage-intro-title">
+        STAGE 1
+      </div>
+    </section>
+
+    <section
+      id="fail-screen"
+      aria-label="挑戰失敗"
+    >
+      <div id="fail-title">
+        FAIL !!!
+      </div>
+
+      <button
+        id="respawn-button"
+        type="button"
+      >
+        重生
+      </button>
+    </section>
+
+    <div id="desktop-help">
+      A／D 或方向鍵移動｜W／空白鍵跳躍｜S 蹲下｜Shift 跑步｜攻擊：
+      <span id="attack-key-label">Z</span>
+    </div>
+
+    <div id="keyboard-settings">
+      <label for="attack-key-select">
+        攻擊鍵
+      </label>
+
+      <select id="attack-key-select">
+        <option value="KeyZ">Z</option>
+        <option value="KeyX">X</option>
+        <option value="KeyC">C</option>
+        <option value="KeyV">V</option>
+        <option value="KeyJ">J</option>
+        <option value="KeyK">K</option>
+        <option value="KeyL">L</option>
+      </select>
+    </div>
+
+    <div id="touch-controls">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-stick"></div>
+        </div>
+      </div>
+
+      <div id="action-controls">
+        <button
+          class="action-button"
+          type="button"
+          data-control="attack"
+          aria-label="攻擊"
+        >
+          攻
+        </button>
+
+        <button
+          id="jump-button"
+          class="action-button"
+          type="button"
+          data-control="jump"
+          aria-label="跳躍"
+        >
+          跳
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    /* ==================================================
+       DOM
+    ================================================== */
+
+    const canvas =
+      document.getElementById("game-canvas");
+
+    const context =
+      canvas.getContext("2d");
+
+    const orientationScreen =
+      document.getElementById("orientation-screen");
+
+    const loadingPage =
+      document.getElementById("loading-page");
+
+    const loadingStatus =
+      document.getElementById("loading-status");
+
+    const loadingMessage =
+      document.getElementById("loading-message");
+
+    const progressBar =
+      document.getElementById("progress-bar");
+
+    const progressNumber =
+      document.getElementById("progress-number");
+
+    const enterDungeonButton =
+      document.getElementById("enter-dungeon-button");
+
+    const stageIntro =
+      document.getElementById("stage-intro");
+
+    const stageIntroTitle =
+      document.getElementById("stage-intro-title");
+
+    const failScreen =
+      document.getElementById("fail-screen");
+
+    const respawnButton =
+      document.getElementById("respawn-button");
+
+    const attackKeySelect =
+      document.getElementById("attack-key-select");
+
+    const attackKeyLabel =
+      document.getElementById("attack-key-label");
+
+    const joystickZone =
+      document.getElementById("joystick-zone");
+
+    const joystickBase =
+      document.getElementById("joystick-base");
+
+    const joystickStick =
+      document.getElementById("joystick-stick");
+
+    context.imageSmoothingEnabled = false;
+
+    /* ==================================================
+       世界設定
+    ================================================== */
+
+    const VIEW_WIDTH = 1280;
+    const VIEW_HEIGHT = 720;
+
+    const WORLD_WIDTH = 2560;
+    const WORLD_HEIGHT = 1440;
+
+    const WORLD_GROUND_Y = 1240;
+
+    const GRAVITY = 2200;
+    const WALK_SPEED = 230;
+    const RUN_SPEED = 420;
+    const JUMP_FORCE = 820;
+
+    const PLAYER_SCALE = 2.6;
+    const ENEMY_SCALE = 2.3;
+
+    const CAMERA_FOLLOW_SPEED = 5.5;
+
+    const JOYSTICK_DEAD_ZONE = 0.14;
+    const RUN_THRESHOLD = 0.72;
+    const DUCK_THRESHOLD = 0.62;
+
+    const ORIENTATION_FADE_TIME = 650;
+
+    const STAGE_INTRO_HOLD_TIME = 500;
+    const STAGE_INTRO_FADE_TIME = 500;
+    const LOADING_PAGE_FADE_TIME = 850;
+
+    /* ==================================================
+       V0.6 戰鬥設定
+    ================================================== */
+
+    const PLAYER_LEVEL = 1;
+    const ORC_LEVEL = 1;
+
+    const PLAYER_BASE_MAX_HP = 100;
+    const PLAYER_HP_PER_LEVEL = 20;
+    const ORC_BASE_MAX_HP = 100;
+
+    const PLAYER_ATTACK_DAMAGE = 25;
+    const ORC_ATTACK_DAMAGE = 18;
+    const BODY_CONTACT_DAMAGE = 10;
+
+    const PLAYER_INVINCIBLE_TIME = 0.5;
+    const BODY_KNOCKBACK_DISTANCE = 6;
+    const ORC_FADE_DURATION = 0.55;
+
+    const PLAYER_ATTACK_ACTIVE_START = 3;
+    const PLAYER_ATTACK_ACTIVE_END = 5;
+
+    const ORC_ATTACK_ACTIVE_START = 3;
+    const ORC_ATTACK_ACTIVE_END = 5;
+
+    /* ==================================================
+       ORC1 AI
+    ================================================== */
+
+    const ORC_PATROL_SPEED = 72;
+    const ORC_CHASE_SPEED = 112;
+
+    const ORC_DETECTION_RANGE = 390;
+    const ORC_ATTACK_RANGE = 105;
+
+    const ORC_ATTACK_COOLDOWN = 1.1;
+    const ORC_PATROL_WAIT_TIME = 1;
+
+    const ORC_DRAW_MARGIN = 260;
+
+    /*
+      自動 Anchor 偵測完成後，
+      再向下補償 4 個原始素材像素。
+
+      4 × 2.3 = 9.2px
+    */
+    const ORC_EXTRA_FOOT_OFFSET = 4;
+
+    /* ==================================================
+       遊戲狀態
+    ================================================== */
+
+    let assetsLoaded = false;
+    let fakeLoadingCompleted = false;
+    let loadingSequenceStarted = false;
+
+    let gameStarted = false;
+    let gameLoopStarted = false;
+
+    let playerControlEnabled = false;
+    let stageIntroPlaying = false;
+
+    let orientationTransitioning = false;
+    let gameFailed = false;
+
+    let previousTime =
+      performance.now();
+
+    const camera = {
+      x: 0,
+      y: 0,
+
+      targetX: 0,
+      targetY: 0
+    };
+
+    const player = {
+      x: 340,
+      y: WORLD_GROUND_Y,
+
+      velocityX: 0,
+      velocityY: 0,
+
+      facing: 1,
+
+      grounded: true,
+      ducking: false,
+
+      attacking: false,
+      airAttacking: false,
+
+      animation: "idle",
+
+      frameIndex: 0,
+      frameTimer: 0,
+
+      spawnX: 340,
+      level: PLAYER_LEVEL,
+      maxHp:
+        PLAYER_BASE_MAX_HP +
+        (PLAYER_LEVEL - 1) *
+        PLAYER_HP_PER_LEVEL,
+      hp:
+        PLAYER_BASE_MAX_HP +
+        (PLAYER_LEVEL - 1) *
+        PLAYER_HP_PER_LEVEL,
+
+      invincibleTimer: 0,
+      attackHitRegistered: false
+    };
+
+    const orc = {
+      x: 1100,
+      y: WORLD_GROUND_Y,
+
+      velocityX: 0,
+
+      facing: -1,
+
+      animation: "idle",
+
+      frameIndex: 0,
+      frameTimer: 0,
+
+      state: "patrol",
+
+      attacking: false,
+      attackCooldown: 0,
+
+      patrolMinX: 850,
+      patrolMaxX: 1500,
+
+      patrolDirection: -1,
+      patrolWaitTimer: 0,
+
+      spawnX: 1100,
+      level: ORC_LEVEL,
+      maxHp: ORC_BASE_MAX_HP,
+      hp: ORC_BASE_MAX_HP,
+
+      attackHitRegistered: false,
+      dead: false,
+      opacity: 1,
+      fadeTimer: 0
+    };
+
+    /* ==================================================
+       輸入
+    ================================================== */
+
+    const input = {
+      left: false,
+      right: false,
+      run: false,
+      duck: false,
+      jump: false,
+      attack: false
+    };
+
+    const pressed = {
+      jump: false,
+      attack: false
+    };
+
+    const joystick = {
+      active: false,
+      pointerId: null,
+
+      centerX: 0,
+      centerY: 0,
+      radius: 0,
+
+      x: 0,
+      y: 0,
+      magnitude: 0
+    };
+
+    /* ==================================================
+       動畫定義
+    ================================================== */
+
+    const playerAnimationDefinitions = {
+      idle: {
+        folder: "Idle",
+        prefix: "idle",
+        frameCount: 2,
+        frameDuration: 0.42,
+        loop: true
+      },
+
+      walk: {
+        folder: "Walk",
+        prefix: "Walk",
+        frameCount: 4,
+        frameDuration: 0.13,
+        loop: true
+      },
+
+      run: {
+        folder: "Run",
+        prefix: "Run",
+        frameCount: 8,
+        frameDuration: 0.075,
+        loop: true
+      },
+
+      duck: {
+        folder: "Duck",
+        prefix: "Duck",
+        frameCount: 6,
+        frameDuration: 0.08,
+        loop: false
+      },
+
+      jump: {
+        folder: "Jump",
+        prefix: "Jump",
+        frameCount: 8,
+        frameDuration: 0.09,
+        loop: false
+      },
+
+      attack: {
+        folder: "ATK",
+        prefix: "ATK",
+        frameCount: 8,
+        frameDuration: 0.065,
+        loop: false
+      }
+    };
+
+    const enemyAnimationDefinitions = {
+      idle: {
+        folder: "Idle",
+        prefix: "Idle",
+        frameCount: 4,
+        frameDuration: 0.19,
+        loop: true
+      },
+
+      walk: {
+        folder: "Walk",
+        prefix: "Walk",
+        frameCount: 6,
+        frameDuration: 0.12,
+        loop: true
+      },
+
+      attack: {
+        folder: "ATK",
+        prefix: "ATK",
+        frameCount: 8,
+        frameDuration: 0.085,
+        loop: false
+      }
+    };
+
+    const playerAnimations = {};
+    const enemyAnimations = {};
+
+    /* ==================================================
+       工具函式
+    ================================================== */
+
+    function clamp(
+      value,
+      minimum,
+      maximum
+    ) {
+      return Math.max(
+        minimum,
+        Math.min(maximum, value)
+      );
+    }
+
+    function wait(milliseconds) {
+      return new Promise((resolve) => {
+        window.setTimeout(
+          resolve,
+          milliseconds
+        );
+      });
+    }
+
+    function waitForNextPaint() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve);
+        });
+      });
+    }
+
+    function isTouchDevice() {
+      return (
+        window.matchMedia(
+          "(pointer: coarse)"
+        ).matches ||
+        window.matchMedia(
+          "(hover: none)"
+        ).matches
+      );
+    }
+
+    function isPortrait() {
+      return (
+        window.innerHeight >
+        window.innerWidth
+      );
+    }
+
+    function padNumber(number) {
+      return String(number).padStart(
+        2,
+        "0"
+      );
+    }
+
+    function worldToScreenX(worldX) {
+      return worldX - camera.x;
+    }
+
+    function worldToScreenY(worldY) {
+      return worldY - camera.y;
+    }
+
+    function rectanglesIntersect(
+      first,
+      second
+    ) {
+      return (
+        first.x <
+          second.x +
+            second.width &&
+        first.x +
+          first.width >
+          second.x &&
+        first.y <
+          second.y +
+            second.height &&
+        first.y +
+          first.height >
+          second.y
+      );
+    }
+
+    /* ==================================================
+       攻擊鍵
+    ================================================== */
+
+    const ATTACK_KEY_STORAGE =
+      "hoodedCharacterAttackKey";
+
+    const allowedAttackKeys = {
+      KeyZ: "Z",
+      KeyX: "X",
+      KeyC: "C",
+      KeyV: "V",
+      KeyJ: "J",
+      KeyK: "K",
+      KeyL: "L"
+    };
+
+    let attackKeyCode =
+      localStorage.getItem(
+        ATTACK_KEY_STORAGE
+      ) || "KeyZ";
+
+    if (!allowedAttackKeys[attackKeyCode]) {
+      attackKeyCode = "KeyZ";
+    }
+
+    attackKeySelect.value =
+      attackKeyCode;
+
+    attackKeyLabel.textContent =
+      allowedAttackKeys[attackKeyCode];
+
+    attackKeySelect.addEventListener(
+      "change",
+      () => {
+        attackKeyCode =
+          attackKeySelect.value;
+
+        localStorage.setItem(
+          ATTACK_KEY_STORAGE,
+          attackKeyCode
+        );
+
+        attackKeyLabel.textContent =
+          allowedAttackKeys[attackKeyCode];
+
+        resetAllInputs();
+
+        canvas.focus();
+      }
+    );
+
+    /* ==================================================
+       素材載入與 ORC 腳底偵測
+    ================================================== */
+
+    function loadImage(path) {
+      return new Promise(
+        (resolve, reject) => {
+          const image = new Image();
+
+          image.onload = () => {
+            resolve(image);
+          };
+
+          image.onerror = () => {
+            reject(
+              new Error(
+                `無法載入圖片：${path}`
+              )
+            );
+          };
+
+          image.src = path;
+        }
+      );
+    }
+
+    function calculateSpriteFootOffset(image) {
+      const scanCanvas =
+        document.createElement("canvas");
+
+      scanCanvas.width =
+        image.naturalWidth ||
+        image.width;
+
+      scanCanvas.height =
+        image.naturalHeight ||
+        image.height;
+
+      const scanContext =
+        scanCanvas.getContext(
+          "2d",
+          {
+            willReadFrequently: true
+          }
+        );
+
+      if (!scanContext) {
+        return 0;
+      }
+
+      scanContext.clearRect(
+        0,
+        0,
+        scanCanvas.width,
+        scanCanvas.height
+      );
+
+      scanContext.drawImage(
+        image,
+        0,
+        0
+      );
+
+      let imageData;
+
+      try {
+        imageData =
+          scanContext.getImageData(
+            0,
+            0,
+            scanCanvas.width,
+            scanCanvas.height
+          );
+      } catch (error) {
+        console.warn(
+          "無法分析 Sprite Anchor：",
+          error
+        );
+
+        return 0;
+      }
+
+      /*
+        僅掃描圖片中央區域，
+        避免武器被誤認為腳底。
+      */
+      const startX =
+        Math.floor(
+          scanCanvas.width *
+          0.3
+        );
+
+      const endX =
+        Math.ceil(
+          scanCanvas.width *
+          0.7
+        );
+
+      let lowestOpaqueY = -1;
+
+      for (
+        let y =
+          scanCanvas.height - 1;
+        y >= 0;
+        y -= 1
+      ) {
+        let foundOpaquePixel = false;
+
+        for (
+          let x = startX;
+          x < endX;
+          x += 1
+        ) {
+          const alphaIndex =
+            (
+              y *
+              scanCanvas.width +
+              x
+            ) *
+              4 +
+            3;
+
+          if (
+            imageData.data[
+              alphaIndex
+            ] > 20
+          ) {
+            foundOpaquePixel = true;
+            break;
+          }
+        }
+
+        if (foundOpaquePixel) {
+          lowestOpaqueY = y;
+          break;
+        }
+      }
+
+      if (lowestOpaqueY < 0) {
+        return 0;
+      }
+
+      return (
+        scanCanvas.height -
+        1 -
+        lowestOpaqueY
+      );
+    }
+
+    async function loadAnimationGroup(
+      destination,
+      definitions,
+      basePath,
+      analyzeFootOffsets = false
+    ) {
+      const tasks = [];
+
+      for (
+        const [
+          animationName,
+          definition
+        ] of Object.entries(definitions)
+      ) {
+        destination[
+          animationName
+        ] = {
+          frames: [],
+          footOffsets: [],
+
+          frameDuration:
+            definition.frameDuration,
+
+          loop:
+            definition.loop
+        };
+
+        for (
+          let frameNumber = 1;
+          frameNumber <=
+            definition.frameCount;
+          frameNumber += 1
+        ) {
+          const path =
+            basePath +
+            "/" +
+            definition.folder +
+            "/" +
+            definition.prefix +
+            padNumber(frameNumber) +
+            ".png";
+
+          tasks.push(
+            loadImage(path).then(
+              (image) => {
+                const frameIndex =
+                  frameNumber - 1;
+
+                destination[
+                  animationName
+                ].frames[
+                  frameIndex
+                ] = image;
+
+                destination[
+                  animationName
+                ].footOffsets[
+                  frameIndex
+                ] =
+                  analyzeFootOffsets
+                    ? calculateSpriteFootOffset(
+                        image
+                      )
+                    : 0;
+              }
+            )
+          );
+        }
+      }
+
+      await Promise.all(tasks);
+    }
+
+    async function loadAllAnimations() {
+      await Promise.all([
+        loadAnimationGroup(
+          playerAnimations,
+          playerAnimationDefinitions,
+          "2D_Character",
+          false
+        ),
+
+        loadAnimationGroup(
+          enemyAnimations,
+          enemyAnimationDefinitions,
+          "2D_Enemy/ORC1",
+          true
+        )
+      ]);
+    }
+
+    /* ==================================================
+       Loading
+    ================================================== */
+
+    function setLoadingProgress(
+      progress,
+      message
+    ) {
+      const safeProgress =
+        clamp(progress, 0, 100);
+
+      progressBar.style.width =
+        `${safeProgress}%`;
+
+      progressNumber.textContent =
+        `${Math.floor(
+          safeProgress
+        )}%`;
+
+      if (message) {
+        loadingMessage.textContent =
+          message;
+      }
+    }
+
+    function animateProgress(
+      start,
+      end,
+      duration,
+      message
+    ) {
+      return new Promise((resolve) => {
+        const startTime =
+          performance.now();
+
+        function update(currentTime) {
+          const elapsed =
+            currentTime - startTime;
+
+          const ratio =
+            Math.min(
+              elapsed / duration,
+              1
+            );
+
+          const easedRatio =
+            1 -
+            Math.pow(
+              1 - ratio,
+              2
+            );
+
+          const progress =
+            start +
+            (
+              end - start
+            ) *
+            easedRatio;
+
+          setLoadingProgress(
+            progress,
+            message
+          );
+
+          if (ratio < 1) {
+            requestAnimationFrame(
+              update
+            );
+          } else {
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(
+          update
+        );
+      });
+    }
+
+    async function runFakeLoading() {
+      setLoadingProgress(
+        0,
+        "正在確認地下城入口……"
+      );
+
+      await animateProgress(
+        0,
+        30,
+        850,
+        "正在確認地下城入口……"
+      );
+
+      await wait(150);
+
+      await animateProgress(
+        30,
+        62,
+        950,
+        "正在喚醒兜帽旅人……"
+      );
+
+      await wait(150);
+
+      await animateProgress(
+        62,
+        82,
+        850,
+        "正在分析地下城生物……"
+      );
+
+      await wait(150);
+
+      await animateProgress(
+        82,
+        90,
+        700,
+        "正在校正獸人腳底座標……"
+      );
+
+      setLoadingProgress(
+        90,
+        "正在解除地下城最後封印……"
+      );
+
+      await wait(1000);
+
+      await animateProgress(
+        90,
+        100,
+        850,
+        "正在建立冒險視野……"
+      );
+
+      setLoadingProgress(
+        100,
+        "地下城入口已開啟"
+      );
+
+      fakeLoadingCompleted = true;
+    }
+
+    function revealEnterButton() {
+      if (
+        !assetsLoaded ||
+        !fakeLoadingCompleted
+      ) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        loadingStatus.classList.add(
+          "hidden"
+        );
+
+        window.setTimeout(() => {
+          enterDungeonButton.classList.add(
+            "visible"
+          );
+        }, 300);
+      }, 450);
+    }
+
+    async function startLoadingSequence() {
+      if (loadingSequenceStarted) {
+        return;
+      }
+
+      loadingSequenceStarted = true;
+
+      loadingPage.classList.add(
+        "prepared"
+      );
+
+      await waitForNextPaint();
+
+      loadingPage.classList.add(
+        "visible"
+      );
+
+      try {
+        await Promise.all([
+          loadAllAnimations().then(
+            () => {
+              assetsLoaded = true;
+            }
+          ),
+
+          runFakeLoading()
+        ]);
+
+        revealEnterButton();
+      } catch (error) {
+        console.error(error);
+
+        loadingMessage.textContent =
+          "素材載入失敗，請檢查圖片路徑與大小寫";
+
+        progressNumber.textContent =
+          "錯誤";
+
+        progressBar.style.width =
+          "100%";
+
+        progressBar.style.background =
+          "#944b4b";
+      }
+    }
+
+    /* ==================================================
+       手機方向提示
+    ================================================== */
+
+    function showOrientationScreen() {
+      orientationScreen.classList.remove(
+        "fade-out"
+      );
+
+      orientationScreen.classList.add(
+        "visible"
+      );
+    }
+
+    async function leaveOrientationScreen() {
+      if (
+        orientationTransitioning ||
+        !orientationScreen.classList.contains(
+          "visible"
+        )
+      ) {
+        return;
+      }
+
+      orientationTransitioning = true;
+
+      loadingPage.classList.add(
+        "prepared"
+      );
+
+      await waitForNextPaint();
+
+      loadingPage.classList.add(
+        "visible"
+      );
+
+      orientationScreen.classList.add(
+        "fade-out"
+      );
+
+      startLoadingSequence();
+
+      await wait(
+        ORIENTATION_FADE_TIME
+      );
+
+      orientationScreen.classList.remove(
+        "visible",
+        "fade-out"
+      );
+
+      orientationTransitioning = false;
+    }
+
+    function handleOrientationState() {
+      if (
+        gameStarted ||
+        !isTouchDevice()
+      ) {
+        return;
+      }
+
+      if (isPortrait()) {
+        showOrientationScreen();
+        return;
+      }
+
+      if (
+        orientationScreen.classList.contains(
+          "visible"
+        )
+      ) {
+        leaveOrientationScreen();
+      } else {
+        startLoadingSequence();
+      }
+    }
+
+    /* ==================================================
+       Stage Intro
+    ================================================== */
+
+    async function playStageIntro() {
+      if (stageIntroPlaying) {
+        return;
+      }
+
+      stageIntroPlaying = true;
+      playerControlEnabled = false;
+
+      document.body.classList.remove(
+        "player-control-enabled"
+      );
+
+      resetAllInputs();
+
+      stageIntroTitle.textContent =
+        "STAGE 1";
+
+      stageIntro.classList.remove(
+        "fade-out"
+      );
+
+      stageIntro.classList.add(
+        "visible"
+      );
+
+      await waitForNextPaint();
+
+      await wait(
+        STAGE_INTRO_HOLD_TIME
+      );
+
+      stageIntro.classList.add(
+        "fade-out"
+      );
+
+      await wait(
+        STAGE_INTRO_FADE_TIME
+      );
+
+      stageIntro.classList.remove(
+        "visible",
+        "fade-out"
+      );
+
+      resetAllInputs();
+
+      playerControlEnabled = true;
+      stageIntroPlaying = false;
+
+      document.body.classList.add(
+        "player-control-enabled"
+      );
+
+      canvas.focus();
+    }
+
+    /* ==================================================
+       開始遊戲
+    ================================================== */
+
+    async function startGame() {
+      if (
+        gameStarted ||
+        !assetsLoaded ||
+        !fakeLoadingCompleted
+      ) {
+        return;
+      }
+
+      gameStarted = true;
+      playerControlEnabled = false;
+
+      resetAllInputs();
+      snapCameraToPlayer();
+
+      document.body.classList.add(
+        "game-started"
+      );
+
+      document.body.classList.remove(
+        "player-control-enabled"
+      );
+
+      loadingPage.classList.add(
+        "game-entered"
+      );
+
+      window.setTimeout(() => {
+        updateJoystickCenter();
+      }, 100);
+
+      /*
+        等待 Loading Page 完成 0.8 秒淡出，
+        再顯示 STAGE 1。
+      */
+      await wait(
+        LOADING_PAGE_FADE_TIME
+      );
+
+      await playStageIntro();
+    }
+
+    enterDungeonButton.addEventListener(
+      "click",
+      startGame
+    );
+
+    /* ==================================================
+       玩家動畫
+    ================================================== */
+
+    function setPlayerAnimation(
+      animationName,
+      restart = false
+    ) {
+      if (
+        !playerAnimations[
+          animationName
+        ]
+      ) {
+        return;
+      }
+
+      if (
+        player.animation !==
+          animationName ||
+        restart
+      ) {
+        player.animation =
+          animationName;
+
+        player.frameIndex = 0;
+        player.frameTimer = 0;
+
+        if (
+          animationName ===
+          "attack"
+        ) {
+          player.attackHitRegistered =
+            false;
+        }
+      }
+    }
+
+    function completePlayerAttack() {
+      player.attacking = false;
+      player.airAttacking = false;
+
+      if (player.grounded) {
+        setPlayerAnimation(
+          "idle",
+          true
+        );
+      } else {
+        setPlayerAnimation(
+          "jump",
+          true
+        );
+      }
+    }
+
+    function updatePlayerAnimation(
+      deltaTime
+    ) {
+      const animation =
+        playerAnimations[
+          player.animation
+        ];
+
+      if (
+        !animation ||
+        animation.frames.length === 0
+      ) {
+        return;
+      }
+
+      if (
+        player.animation ===
+        "jump"
+      ) {
+        const lastFrame =
+          animation.frames.length - 1;
+
+        if (
+          player.velocityY < -520
+        ) {
+          player.frameIndex =
+            Math.min(
+              1,
+              lastFrame
+            );
+        } else if (
+          player.velocityY < -260
+        ) {
+          player.frameIndex =
+            Math.min(
+              2,
+              lastFrame
+            );
+        } else if (
+          player.velocityY < -60
+        ) {
+          player.frameIndex =
+            Math.min(
+              3,
+              lastFrame
+            );
+        } else if (
+          player.velocityY < 160
+        ) {
+          player.frameIndex =
+            Math.min(
+              4,
+              lastFrame
+            );
+        } else if (
+          player.velocityY < 380
+        ) {
+          player.frameIndex =
+            Math.min(
+              5,
+              lastFrame
+            );
+        } else if (
+          player.velocityY < 620
+        ) {
+          player.frameIndex =
+            Math.min(
+              6,
+              lastFrame
+            );
+        } else {
+          player.frameIndex =
+            Math.min(
+              7,
+              lastFrame
+            );
+        }
+
+        return;
+      }
+
+      player.frameTimer +=
+        deltaTime;
+
+      while (
+        player.frameTimer >=
+        animation.frameDuration
+      ) {
+        player.frameTimer -=
+          animation.frameDuration;
+
+        player.frameIndex += 1;
+
+        if (
+          player.frameIndex >=
+          animation.frames.length
+        ) {
+          if (animation.loop) {
+            player.frameIndex = 0;
+          } else {
+            player.frameIndex =
+              animation.frames.length -
+              1;
+
+            if (
+              player.animation ===
+              "attack"
+            ) {
+              completePlayerAttack();
+            }
+          }
+        }
+      }
+    }
+
+    /* ==================================================
+       ORC 動畫
+    ================================================== */
+
+    function setOrcAnimation(
+      animationName,
+      restart = false
+    ) {
+      if (
+        !enemyAnimations[
+          animationName
+        ]
+      ) {
+        return;
+      }
+
+      if (
+        orc.animation !==
+          animationName ||
+        restart
+      ) {
+        orc.animation =
+          animationName;
+
+        orc.frameIndex = 0;
+        orc.frameTimer = 0;
+
+        if (
+          animationName ===
+          "attack"
+        ) {
+          orc.attackHitRegistered =
+            false;
+        }
+      }
+    }
+
+    function updateOrcAnimation(
+      deltaTime
+    ) {
+      const animation =
+        enemyAnimations[
+          orc.animation
+        ];
+
+      if (
+        !animation ||
+        animation.frames.length === 0
+      ) {
+        return;
+      }
+
+      orc.frameTimer +=
+        deltaTime;
+
+      while (
+        orc.frameTimer >=
+        animation.frameDuration
+      ) {
+        orc.frameTimer -=
+          animation.frameDuration;
+
+        orc.frameIndex += 1;
+
+        if (
+          orc.frameIndex >=
+          animation.frames.length
+        ) {
+          if (animation.loop) {
+            orc.frameIndex = 0;
+          } else {
+            orc.frameIndex =
+              animation.frames.length -
+              1;
+
+            if (
+              orc.animation ===
+              "attack"
+            ) {
+              orc.attacking = false;
+
+              orc.attackCooldown =
+                ORC_ATTACK_COOLDOWN;
+
+              setOrcAnimation(
+                "idle",
+                true
+              );
+            }
+          }
+        }
+      }
+    }
+
+    /* ==================================================
+       V0.6 戰鬥判定
+    ================================================== */
+
+    function getPlayerHurtbox() {
+      const width = 42;
+      const height =
+        player.ducking
+          ? 48
+          : 72;
+
+      return {
+        x: player.x -
+          width / 2,
+        y: player.y -
+          height,
+        width,
+        height
+      };
+    }
+
+    function getPlayerAttackHitbox() {
+      if (
+        !player.attacking ||
+        player.animation !==
+          "attack" ||
+        player.frameIndex <
+          PLAYER_ATTACK_ACTIVE_START ||
+        player.frameIndex >
+          PLAYER_ATTACK_ACTIVE_END
+      ) {
+        return null;
+      }
+
+      const width = 70;
+      const height = 58;
+      const offset = 38;
+
+      return {
+        x:
+          player.facing === 1
+            ? player.x +
+              offset
+            : player.x -
+              offset -
+              width,
+        y:
+          player.y -
+          height -
+          8,
+        width,
+        height
+      };
+    }
+
+    function getOrcHurtbox() {
+      const width = 72;
+      const height = 105;
+
+      return {
+        x: orc.x -
+          width / 2,
+        y: orc.y -
+          height,
+        width,
+        height
+      };
+    }
+
+    function getOrcAttackHitbox() {
+      if (
+        orc.dead ||
+        !orc.attacking ||
+        orc.animation !==
+          "attack" ||
+        orc.frameIndex <
+          ORC_ATTACK_ACTIVE_START ||
+        orc.frameIndex >
+          ORC_ATTACK_ACTIVE_END
+      ) {
+        return null;
+      }
+
+      const width = 86;
+      const height = 75;
+      const offset = 42;
+
+      return {
+        x:
+          orc.facing === 1
+            ? orc.x +
+              offset
+            : orc.x -
+              offset -
+              width,
+        y:
+          orc.y -
+          height -
+          4,
+        width,
+        height
+      };
+    }
+
+    function damagePlayer(amount) {
+      if (
+        gameFailed ||
+        player.invincibleTimer > 0 ||
+        player.hp <= 0
+      ) {
+        return;
+      }
+
+      player.hp = Math.max(
+        0,
+        player.hp - amount
+      );
+
+      player.invincibleTimer =
+        PLAYER_INVINCIBLE_TIME;
+
+      if (player.hp <= 0) {
+        triggerFail();
+      }
+    }
+
+    function damageOrc(amount) {
+      if (
+        orc.dead ||
+        orc.hp <= 0
+      ) {
+        return;
+      }
+
+      orc.hp = Math.max(
+        0,
+        orc.hp - amount
+      );
+
+      if (orc.hp <= 0) {
+        orc.dead = true;
+        orc.attacking = false;
+        orc.velocityX = 0;
+        orc.state = "dead";
+        orc.fadeTimer = 0;
+      }
+    }
+
+    function applyBodyContact() {
+      if (
+        orc.dead ||
+        gameFailed
+      ) {
+        return;
+      }
+
+      const playerHurtbox =
+        getPlayerHurtbox();
+
+      const orcHurtbox =
+        getOrcHurtbox();
+
+      if (
+        !rectanglesIntersect(
+          playerHurtbox,
+          orcHurtbox
+        )
+      ) {
+        return;
+      }
+
+      const playerDirection =
+        player.x < orc.x
+          ? -1
+          : 1;
+
+      player.x = clamp(
+        player.x +
+          playerDirection *
+          BODY_KNOCKBACK_DISTANCE,
+        52,
+        WORLD_WIDTH - 52
+      );
+
+      if (
+        player.level >
+        orc.level
+      ) {
+        orc.x = clamp(
+          orc.x -
+            playerDirection *
+            BODY_KNOCKBACK_DISTANCE,
+          80,
+          WORLD_WIDTH - 80
+        );
+      }
+
+      damagePlayer(
+        BODY_CONTACT_DAMAGE
+      );
+    }
+
+    function resolveCombat() {
+      if (
+        !gameStarted ||
+        !playerControlEnabled ||
+        gameFailed ||
+        orc.dead
+      ) {
+        return;
+      }
+
+      const playerAttackHitbox =
+        getPlayerAttackHitbox();
+
+      if (
+        playerAttackHitbox &&
+        !player.attackHitRegistered &&
+        rectanglesIntersect(
+          playerAttackHitbox,
+          getOrcHurtbox()
+        )
+      ) {
+        player.attackHitRegistered =
+          true;
+
+        damageOrc(
+          PLAYER_ATTACK_DAMAGE
+        );
+      }
+
+      const orcAttackHitbox =
+        getOrcAttackHitbox();
+
+      if (
+        orcAttackHitbox &&
+        !orc.attackHitRegistered &&
+        rectanglesIntersect(
+          orcAttackHitbox,
+          getPlayerHurtbox()
+        )
+      ) {
+        orc.attackHitRegistered =
+          true;
+
+        damagePlayer(
+          ORC_ATTACK_DAMAGE
+        );
+      }
+
+      applyBodyContact();
+    }
+
+    /* ==================================================
+       玩家控制
+    ================================================== */
+
+    function triggerJump() {
+      if (
+        !gameStarted ||
+        !playerControlEnabled ||
+        !player.grounded ||
+        player.attacking ||
+        player.ducking
+      ) {
+        return;
+      }
+
+      player.grounded = false;
+      player.ducking = false;
+
+      player.velocityY =
+        -JUMP_FORCE;
+
+      setPlayerAnimation(
+        "jump",
+        true
+      );
+    }
+
+    function triggerPlayerAttack() {
+      if (
+        !gameStarted ||
+        !playerControlEnabled ||
+        player.attacking ||
+        player.ducking
+      ) {
+        return;
+      }
+
+      player.attacking = true;
+
+      if (player.grounded) {
+        player.airAttacking = false;
+        player.velocityX = 0;
+      } else {
+        player.airAttacking = true;
+      }
+
+      setPlayerAnimation(
+        "attack",
+        true
+      );
+    }
+
+    function updatePlayer(
+      deltaTime
+    ) {
+      if (!gameStarted) {
+        if (assetsLoaded) {
+          updatePlayerAnimation(
+            deltaTime
+          );
+        }
+
+        return;
+      }
+
+      /*
+        Stage Intro 期間：
+        玩家固定保持 Idle，不能移動或攻擊。
+      */
+      if (
+        !playerControlEnabled ||
+        gameFailed
+      ) {
+        player.velocityX = 0;
+        player.velocityY = 0;
+
+        player.y =
+          WORLD_GROUND_Y;
+
+        player.grounded = true;
+        player.ducking = false;
+        player.attacking = false;
+        player.airAttacking = false;
+
+        pressed.jump = false;
+        pressed.attack = false;
+
+        setPlayerAnimation(
+          "idle"
+        );
+
+        updatePlayerAnimation(
+          deltaTime
+        );
+
+        return;
+      }
+
+      if (
+        player.invincibleTimer > 0
+      ) {
+        player.invincibleTimer =
+          Math.max(
+            0,
+            player.invincibleTimer -
+              deltaTime
+          );
+      }
+
+      if (pressed.jump) {
+        triggerJump();
+
+        pressed.jump = false;
+      }
+
+      if (pressed.attack) {
+        triggerPlayerAttack();
+
+        pressed.attack = false;
+      }
+
+      let horizontalDirection =
+        Number(input.right) -
+        Number(input.left);
+
+      let analogStrength =
+        Math.abs(
+          horizontalDirection
+        );
+
+      if (joystick.active) {
+        horizontalDirection =
+          joystick.x;
+
+        analogStrength =
+          joystick.magnitude;
+      }
+
+      const joystickDucking =
+        joystick.active &&
+        joystick.y >
+          DUCK_THRESHOLD &&
+        Math.abs(
+          joystick.x
+        ) < 0.55;
+
+      player.ducking =
+        (
+          input.duck ||
+          joystickDucking
+        ) &&
+        player.grounded &&
+        !player.attacking;
+
+      if (
+        !player.attacking &&
+        !player.ducking
+      ) {
+        if (
+          Math.abs(
+            horizontalDirection
+          ) >
+          JOYSTICK_DEAD_ZONE
+        ) {
+          const shouldRun =
+            input.run ||
+            analogStrength >=
+              RUN_THRESHOLD;
+
+          const movementSpeed =
+            shouldRun
+              ? RUN_SPEED
+              : WALK_SPEED;
+
+          player.velocityX =
+            horizontalDirection *
+            movementSpeed;
+
+          player.facing =
+            horizontalDirection > 0
+              ? 1
+              : -1;
+
+          if (player.grounded) {
+            setPlayerAnimation(
+              shouldRun
+                ? "run"
+                : "walk"
+            );
+          }
+        } else {
+          player.velocityX = 0;
+
+          if (player.grounded) {
+            setPlayerAnimation(
+              "idle"
+            );
+          }
+        }
+      } else {
+        if (
+          !player.airAttacking
+        ) {
+          player.velocityX = 0;
+        }
+
+        if (player.ducking) {
+          setPlayerAnimation(
+            "duck"
+          );
+        }
+      }
+
+      if (!player.grounded) {
+        player.velocityY +=
+          GRAVITY *
+          deltaTime;
+
+        if (
+          !player.airAttacking
+        ) {
+          setPlayerAnimation(
+            "jump"
+          );
+        }
+      }
+
+      player.x +=
+        player.velocityX *
+        deltaTime;
+
+      player.y +=
+        player.velocityY *
+        deltaTime;
+
+      player.x = clamp(
+        player.x,
+        52,
+        WORLD_WIDTH - 52
+      );
+
+      if (
+        player.y >=
+        WORLD_GROUND_Y
+      ) {
+        const wasAirborne =
+          !player.grounded;
+
+        player.y =
+          WORLD_GROUND_Y;
+
+        player.velocityY = 0;
+        player.grounded = true;
+
+        if (
+          wasAirborne &&
+          !player.attacking
+        ) {
+          player.airAttacking =
+            false;
+
+          setPlayerAnimation(
+            "idle",
+            true
+          );
+        }
+      }
+
+      if (player.y < 100) {
+        player.y = 100;
+
+        if (
+          player.velocityY < 0
+        ) {
+          player.velocityY = 0;
+        }
+      }
+
+      updatePlayerAnimation(
+        deltaTime
+      );
+    }
+
+    /* ==================================================
+       ORC AI
+    ================================================== */
+
+    function startOrcAttack() {
+      if (
+        orc.dead ||
+        orc.attacking ||
+        orc.attackCooldown > 0
+      ) {
+        return;
+      }
+
+      orc.attacking = true;
+      orc.state = "attack";
+      orc.velocityX = 0;
+
+      orc.facing =
+        player.x >= orc.x
+          ? 1
+          : -1;
+
+      setOrcAnimation(
+        "attack",
+        true
+      );
+    }
+
+    function updateOrc(
+      deltaTime
+    ) {
+      if (!gameStarted) {
+        if (assetsLoaded) {
+          updateOrcAnimation(
+            deltaTime
+          );
+        }
+
+        return;
+      }
+
+      if (orc.dead) {
+        orc.fadeTimer +=
+          deltaTime;
+
+        orc.opacity = clamp(
+          1 -
+            orc.fadeTimer /
+              ORC_FADE_DURATION,
+          0,
+          1
+        );
+
+        return;
+      }
+
+      /*
+        Stage Intro 期間敵人保持 Idle，
+        不提前靠近或攻擊玩家。
+      */
+      if (
+        !playerControlEnabled ||
+        gameFailed
+      ) {
+        orc.velocityX = 0;
+        orc.attacking = false;
+        orc.state = "patrol";
+
+        setOrcAnimation(
+          "idle"
+        );
+
+        updateOrcAnimation(
+          deltaTime
+        );
+
+        return;
+      }
+
+      if (
+        orc.attackCooldown > 0
+      ) {
+        orc.attackCooldown =
+          Math.max(
+            0,
+            orc.attackCooldown -
+              deltaTime
+          );
+      }
+
+      if (orc.attacking) {
+        orc.velocityX = 0;
+
+        updateOrcAnimation(
+          deltaTime
+        );
+
+        return;
+      }
+
+      const differenceX =
+        player.x - orc.x;
+
+      const distanceX =
+        Math.abs(
+          differenceX
+        );
+
+      if (
+        distanceX <=
+        ORC_ATTACK_RANGE
+      ) {
+        orc.state = "attack";
+        orc.velocityX = 0;
+
+        orc.facing =
+          differenceX >= 0
+            ? 1
+            : -1;
+
+        if (
+          orc.attackCooldown <= 0
+        ) {
+          startOrcAttack();
+        } else {
+          setOrcAnimation(
+            "idle"
+          );
+        }
+      } else if (
+        distanceX <=
+        ORC_DETECTION_RANGE
+      ) {
+        orc.state = "chase";
+
+        const direction =
+          differenceX >= 0
+            ? 1
+            : -1;
+
+        orc.facing =
+          direction;
+
+        orc.velocityX =
+          direction *
+          ORC_CHASE_SPEED;
+
+        setOrcAnimation(
+          "walk"
+        );
+      } else {
+        orc.state = "patrol";
+
+        if (
+          orc.patrolWaitTimer > 0
+        ) {
+          orc.patrolWaitTimer =
+            Math.max(
+              0,
+              orc.patrolWaitTimer -
+                deltaTime
+            );
+
+          orc.velocityX = 0;
+
+          setOrcAnimation(
+            "idle"
+          );
+        } else {
+          orc.velocityX =
+            orc.patrolDirection *
+            ORC_PATROL_SPEED;
+
+          orc.facing =
+            orc.patrolDirection;
+
+          setOrcAnimation(
+            "walk"
+          );
+        }
+      }
+
+      orc.x +=
+        orc.velocityX *
+        deltaTime;
+
+      if (
+        orc.state ===
+        "patrol"
+      ) {
+        if (
+          orc.x <=
+          orc.patrolMinX
+        ) {
+          orc.x =
+            orc.patrolMinX;
+
+          orc.patrolDirection = 1;
+
+          orc.patrolWaitTimer =
+            ORC_PATROL_WAIT_TIME;
+
+          orc.velocityX = 0;
+
+          setOrcAnimation(
+            "idle",
+            true
+          );
+        } else if (
+          orc.x >=
+          orc.patrolMaxX
+        ) {
+          orc.x =
+            orc.patrolMaxX;
+
+          orc.patrolDirection = -1;
+
+          orc.patrolWaitTimer =
+            ORC_PATROL_WAIT_TIME;
+
+          orc.velocityX = 0;
+
+          setOrcAnimation(
+            "idle",
+            true
+          );
+        }
+      }
+
+      orc.x = clamp(
+        orc.x,
+        80,
+        WORLD_WIDTH - 80
+      );
+
+      updateOrcAnimation(
+        deltaTime
+      );
+    }
+
+    /* ==================================================
+       FAIL 與重生
+    ================================================== */
+
+    function triggerFail() {
+      if (gameFailed) {
+        return;
+      }
+
+      gameFailed = true;
+      playerControlEnabled = false;
+
+      document.body.classList.remove(
+        "player-control-enabled"
+      );
+
+      resetAllInputs();
+
+      orc.velocityX = 0;
+      orc.attacking = false;
+
+      failScreen.classList.add(
+        "visible"
+      );
+    }
+
+    async function respawnGame() {
+      failScreen.classList.remove(
+        "visible"
+      );
+
+      gameFailed = false;
+      playerControlEnabled = false;
+
+      document.body.classList.remove(
+        "player-control-enabled"
+      );
+
+      resetAllInputs();
+
+      player.x =
+        player.spawnX;
+      player.y =
+        WORLD_GROUND_Y;
+      player.velocityX = 0;
+      player.velocityY = 0;
+      player.facing = 1;
+      player.grounded = true;
+      player.ducking = false;
+      player.attacking = false;
+      player.airAttacking = false;
+      player.hp =
+        player.maxHp;
+      player.invincibleTimer = 0;
+      player.attackHitRegistered =
+        false;
+
+      setPlayerAnimation(
+        "idle",
+        true
+      );
+
+      orc.x =
+        orc.spawnX;
+      orc.y =
+        WORLD_GROUND_Y;
+      orc.velocityX = 0;
+      orc.facing = -1;
+      orc.state = "patrol";
+      orc.attacking = false;
+      orc.attackCooldown = 0;
+      orc.patrolDirection = -1;
+      orc.patrolWaitTimer = 0;
+      orc.hp =
+        orc.maxHp;
+      orc.attackHitRegistered =
+        false;
+      orc.dead = false;
+      orc.opacity = 1;
+      orc.fadeTimer = 0;
+
+      setOrcAnimation(
+        "idle",
+        true
+      );
+
+      snapCameraToPlayer();
+
+      await playStageIntro();
+    }
+
+    respawnButton.addEventListener(
+      "click",
+      respawnGame
+    );
+
+    /* ==================================================
+       相機
+    ================================================== */
+
+    function calculateCameraTarget() {
+      const horizontalAnchor =
+        VIEW_WIDTH * 0.42;
+
+      const verticalAnchor =
+        VIEW_HEIGHT * 0.58;
+
+      camera.targetX =
+        player.x -
+        horizontalAnchor;
+
+      camera.targetY =
+        player.y -
+        verticalAnchor;
+
+      camera.targetX = clamp(
+        camera.targetX,
+        0,
+        WORLD_WIDTH -
+          VIEW_WIDTH
+      );
+
+      camera.targetY = clamp(
+        camera.targetY,
+        0,
+        WORLD_HEIGHT -
+          VIEW_HEIGHT
+      );
+    }
+
+    function snapCameraToPlayer() {
+      calculateCameraTarget();
+
+      camera.x =
+        camera.targetX;
+
+      camera.y =
+        camera.targetY;
+    }
+
+    function updateCamera(
+      deltaTime
+    ) {
+      calculateCameraTarget();
+
+      const smoothing =
+        1 -
+        Math.exp(
+          -CAMERA_FOLLOW_SPEED *
+          deltaTime
+        );
+
+      camera.x +=
+        (
+          camera.targetX -
+          camera.x
+        ) *
+        smoothing;
+
+      camera.y +=
+        (
+          camera.targetY -
+          camera.y
+        ) *
+        smoothing;
+
+      camera.x = clamp(
+        camera.x,
+        0,
+        WORLD_WIDTH -
+          VIEW_WIDTH
+      );
+
+      camera.y = clamp(
+        camera.y,
+        0,
+        WORLD_HEIGHT -
+          VIEW_HEIGHT
+      );
+    }
+
+    /* ==================================================
+       世界繪製
+    ================================================== */
+
+    function drawBackground() {
+      const gradient =
+        context.createLinearGradient(
+          0,
+          0,
+          0,
+          VIEW_HEIGHT
+        );
+
+      gradient.addColorStop(
+        0,
+        "#252e40"
+      );
+
+      gradient.addColorStop(
+        1,
+        "#111722"
+      );
+
+      context.fillStyle =
+        gradient;
+
+      context.fillRect(
+        0,
+        0,
+        VIEW_WIDTH,
+        VIEW_HEIGHT
+      );
+    }
+
+    function drawDungeonWalls() {
+      const tileSize = 96;
+
+      const startColumn =
+        Math.floor(
+          camera.x /
+          tileSize
+        );
+
+      const endColumn =
+        Math.ceil(
+          (
+            camera.x +
+            VIEW_WIDTH
+          ) /
+          tileSize
+        );
+
+      const startRow =
+        Math.floor(
+          camera.y /
+          tileSize
+        );
+
+      const endRow =
+        Math.ceil(
+          (
+            camera.y +
+            VIEW_HEIGHT
+          ) /
+          tileSize
+        );
+
+      for (
+        let row = startRow;
+        row <= endRow;
+        row += 1
+      ) {
+        for (
+          let column =
+            startColumn;
+          column <= endColumn;
+          column += 1
+        ) {
+          const worldX =
+            column *
+            tileSize;
+
+          const worldY =
+            row *
+            tileSize;
+
+          const screenX =
+            worldToScreenX(
+              worldX
+            );
+
+          const screenY =
+            worldToScreenY(
+              worldY
+            );
+
+          const alternate =
+            (
+              row +
+              column
+            ) %
+              2 ===
+            0;
+
+          context.fillStyle =
+            alternate
+              ? "rgba(255,255,255,0.018)"
+              : "rgba(0,0,0,0.025)";
+
+          context.fillRect(
+            Math.floor(
+              screenX
+            ),
+            Math.floor(
+              screenY
+            ),
+            tileSize + 1,
+            tileSize + 1
+          );
+
+          context.strokeStyle =
+            "rgba(255,255,255,0.025)";
+
+          context.strokeRect(
+            Math.floor(
+              screenX
+            ),
+            Math.floor(
+              screenY
+            ),
+            tileSize,
+            tileSize
+          );
+        }
+      }
+    }
+
+    function drawDungeonDecorations() {
+      const pillars = [
+        {
+          x: 760,
+          y: 930
+        },
+        {
+          x: 1200,
+          y: 930
+        },
+        {
+          x: 1660,
+          y: 930
+        },
+        {
+          x: 2140,
+          y: 930
+        }
+      ];
+
+      for (
+        const pillar of pillars
+      ) {
+        const screenX =
+          worldToScreenX(
+            pillar.x
+          );
+
+        const screenY =
+          worldToScreenY(
+            pillar.y
+          );
+
+        if (
+          screenX < -160 ||
+          screenX >
+            VIEW_WIDTH + 160
+        ) {
+          continue;
+        }
+
+        context.fillStyle =
+          "#202937";
+
+        context.fillRect(
+          screenX - 42,
+          screenY,
+          84,
+          310
+        );
+
+        context.fillStyle =
+          "#303b4c";
+
+        context.fillRect(
+          screenX - 55,
+          screenY,
+          110,
+          24
+        );
+
+        context.fillRect(
+          screenX - 55,
+          screenY + 286,
+          110,
+          24
+        );
+
+        context.fillStyle =
+          "rgba(255,255,255,0.045)";
+
+        context.fillRect(
+          screenX - 26,
+          screenY + 34,
+          12,
+          235
+        );
+      }
+
+      const torches = [
+        {
+          x: 520,
+          y: 1040
+        },
+        {
+          x: 980,
+          y: 1040
+        },
+        {
+          x: 1440,
+          y: 1040
+        },
+        {
+          x: 1900,
+          y: 1040
+        },
+        {
+          x: 2340,
+          y: 1040
+        }
+      ];
+
+      for (
+        const torch of torches
+      ) {
+        const screenX =
+          worldToScreenX(
+            torch.x
+          );
+
+        const screenY =
+          worldToScreenY(
+            torch.y
+          );
+
+        if (
+          screenX < -100 ||
+          screenX >
+            VIEW_WIDTH + 100
+        ) {
+          continue;
+        }
+
+        context.fillStyle =
+          "#4a3328";
+
+        context.fillRect(
+          screenX - 5,
+          screenY,
+          10,
+          56
+        );
+
+        const glow =
+          context.createRadialGradient(
+            screenX,
+            screenY,
+            2,
+            screenX,
+            screenY,
+            90
+          );
+
+        glow.addColorStop(
+          0,
+          "rgba(227,121,61,0.42)"
+        );
+
+        glow.addColorStop(
+          1,
+          "rgba(227,121,61,0)"
+        );
+
+        context.fillStyle =
+          glow;
+
+        context.beginPath();
+
+        context.arc(
+          screenX,
+          screenY,
+          90,
+          0,
+          Math.PI * 2
+        );
+
+        context.fill();
+
+        context.fillStyle =
+          "#d96e3d";
+
+        context.beginPath();
+
+        context.moveTo(
+          screenX,
+          screenY - 30
+        );
+
+        context.lineTo(
+          screenX - 12,
+          screenY
+        );
+
+        context.lineTo(
+          screenX,
+          screenY + 7
+        );
+
+        context.lineTo(
+          screenX + 12,
+          screenY
+        );
+
+        context.closePath();
+        context.fill();
+      }
+    }
+
+    function drawGround() {
+      const screenGroundY =
+        worldToScreenY(
+          WORLD_GROUND_Y
+        );
+
+      context.fillStyle =
+        "#303846";
+
+      context.fillRect(
+        0,
+        screenGroundY,
+        VIEW_WIDTH,
+        Math.max(
+          0,
+          VIEW_HEIGHT -
+            screenGroundY
+        )
+      );
+
+      context.fillStyle =
+        "#697588";
+
+      context.fillRect(
+        0,
+        screenGroundY,
+        VIEW_WIDTH,
+        5
+      );
+
+      const floorTileWidth = 84;
+
+      const firstTile =
+        Math.floor(
+          camera.x /
+          floorTileWidth
+        );
+
+      const lastTile =
+        Math.ceil(
+          (
+            camera.x +
+            VIEW_WIDTH
+          ) /
+          floorTileWidth
+        );
+
+      context.fillStyle =
+        "rgba(255,255,255,0.06)";
+
+      for (
+        let tile = firstTile;
+        tile <= lastTile;
+        tile += 1
+      ) {
+        const worldX =
+          tile *
+          floorTileWidth;
+
+        const screenX =
+          worldToScreenX(
+            worldX
+          );
+
+        context.fillRect(
+          screenX,
+          screenGroundY + 38,
+          48,
+          4
+        );
+      }
+    }
+
+    function drawEntityShadow(
+      worldX,
+      radiusX,
+      radiusY
+    ) {
+      const screenX =
+        worldToScreenX(
+          worldX
+        );
+
+      const screenY =
+        worldToScreenY(
+          WORLD_GROUND_Y
+        );
+
+      context.save();
+
+      context.globalAlpha =
+        0.25;
+
+      context.fillStyle =
+        "#000000";
+
+      context.beginPath();
+
+      context.ellipse(
+        screenX,
+        screenY + 5,
+        radiusX,
+        radiusY,
+        0,
+        0,
+        Math.PI * 2
+      );
+
+      context.fill();
+
+      context.restore();
+    }
+
+    function drawPlayer() {
+      const animation =
+        playerAnimations[
+          player.animation
+        ];
+
+      if (
+        !animation ||
+        animation.frames.length === 0
+      ) {
+        return;
+      }
+
+      const frame =
+        animation.frames[
+          Math.min(
+            player.frameIndex,
+            animation.frames.length -
+              1
+          )
+        ];
+
+      if (!frame) {
+        return;
+      }
+
+      const drawWidth =
+        frame.width *
+        PLAYER_SCALE;
+
+      const drawHeight =
+        frame.height *
+        PLAYER_SCALE;
+
+      const screenX =
+        worldToScreenX(
+          player.x
+        );
+
+      const screenY =
+        worldToScreenY(
+          player.y
+        );
+
+      context.save();
+
+      if (
+        player.invincibleTimer > 0 &&
+        Math.floor(
+          player.invincibleTimer * 20
+        ) % 2 === 0
+      ) {
+        context.globalAlpha = 0.4;
+      }
+
+      context.translate(
+        Math.round(
+          screenX
+        ),
+        Math.round(
+          screenY
+        )
+      );
+
+      context.scale(
+        player.facing,
+        1
+      );
+
+      context.drawImage(
+        frame,
+        Math.round(
+          -drawWidth / 2
+        ),
+        Math.round(
+          -drawHeight
+        ),
+        Math.round(
+          drawWidth
+        ),
+        Math.round(
+          drawHeight
+        )
+      );
+
+      context.restore();
+    }
+
+    function getCurrentOrcFootOffset() {
+      const animation =
+        enemyAnimations[
+          orc.animation
+        ];
+
+      if (
+        !animation ||
+        animation.footOffsets.length ===
+          0
+      ) {
+        return 0;
+      }
+
+      const safeFrameIndex =
+        Math.min(
+          orc.frameIndex,
+          animation.footOffsets
+            .length -
+            1
+        );
+
+      return (
+        animation.footOffsets[
+          safeFrameIndex
+        ] ?? 0
+      );
+    }
+
+    function drawOrc() {
+      const animation =
+        enemyAnimations[
+          orc.animation
+        ];
+
+      if (
+        !animation ||
+        animation.frames.length === 0
+      ) {
+        return;
+      }
+
+      const safeFrameIndex =
+        Math.min(
+          orc.frameIndex,
+          animation.frames.length -
+            1
+        );
+
+      const frame =
+        animation.frames[
+          safeFrameIndex
+        ];
+
+      if (!frame) {
+        return;
+      }
+
+      const screenX =
+        worldToScreenX(
+          orc.x
+        );
+
+      if (
+        screenX <
+          -ORC_DRAW_MARGIN ||
+        screenX >
+          VIEW_WIDTH +
+            ORC_DRAW_MARGIN
+      ) {
+        return;
+      }
+
+      const sourceFootOffset =
+        getCurrentOrcFootOffset();
+
+      const footOffsetY =
+        (
+          sourceFootOffset +
+          ORC_EXTRA_FOOT_OFFSET
+        ) *
+        ENEMY_SCALE;
+
+      const screenY =
+        worldToScreenY(
+          orc.y
+        ) +
+        footOffsetY;
+
+      const drawWidth =
+        frame.width *
+        ENEMY_SCALE;
+
+      const drawHeight =
+        frame.height *
+        ENEMY_SCALE;
+
+      context.save();
+
+      context.globalAlpha =
+        orc.opacity;
+
+      context.translate(
+        Math.round(
+          screenX
+        ),
+        Math.round(
+          screenY
+        )
+      );
+
+      context.scale(
+        -orc.facing,
+        1
+      );
+
+      context.drawImage(
+        frame,
+        Math.round(
+          -drawWidth / 2
+        ),
+        Math.round(
+          -drawHeight
+        ),
+        Math.round(
+          drawWidth
+        ),
+        Math.round(
+          drawHeight
+        )
+      );
+
+      context.restore();
+    }
+
+    function drawPlayerHealthBar() {
+      const x = 22;
+      const y = 22;
+      const height = 22;
+
+      const width =
+        170 +
+        (player.level - 1) *
+          18;
+
+      const ratio =
+        player.maxHp > 0
+          ? player.hp /
+            player.maxHp
+          : 0;
+
+      context.save();
+
+      context.fillStyle =
+        "rgba(0,0,0,0.65)";
+
+      context.fillRect(
+        x - 8,
+        y - 8,
+        width + 16,
+        54
+      );
+
+      context.fillStyle =
+        "#ffffff";
+
+      context.font =
+        "bold 16px Arial, Microsoft JhengHei";
+
+      context.fillText(
+        `LV.${player.level}  HP ${player.hp} / ${player.maxHp}`,
+        x,
+        y + 15
+      );
+
+      context.fillStyle =
+        "#2b2025";
+
+      context.fillRect(
+        x,
+        y + 22,
+        width,
+        height
+      );
+
+      context.fillStyle =
+        "#b84552";
+
+      context.fillRect(
+        x,
+        y + 22,
+        width * ratio,
+        height
+      );
+
+      context.strokeStyle =
+        "rgba(255,255,255,0.55)";
+
+      context.strokeRect(
+        x,
+        y + 22,
+        width,
+        height
+      );
+
+      context.restore();
+    }
+
+    function drawOrcHealthBar() {
+      if (
+        orc.opacity <= 0 ||
+        orc.dead
+      ) {
+        return;
+      }
+
+      const width = 96;
+      const height = 9;
+
+      const sourceFootOffset =
+        getCurrentOrcFootOffset();
+
+      const footOffsetY =
+        (
+          sourceFootOffset +
+          ORC_EXTRA_FOOT_OFFSET
+        ) *
+        ENEMY_SCALE;
+
+      const x =
+        worldToScreenX(orc.x) -
+        width / 2;
+
+      const y =
+        worldToScreenY(orc.y) +
+        footOffsetY -
+        64 * ENEMY_SCALE -
+        4;
+
+      const ratio =
+        orc.maxHp > 0
+          ? orc.hp /
+            orc.maxHp
+          : 0;
+
+      context.save();
+      context.globalAlpha =
+        orc.opacity;
+
+      context.fillStyle =
+        "rgba(0,0,0,0.75)";
+
+      context.fillRect(
+        x - 1,
+        y - 1,
+        width + 2,
+        height + 2
+      );
+
+      context.fillStyle =
+        "#3c2024";
+
+      context.fillRect(
+        x,
+        y,
+        width,
+        height
+      );
+
+      context.fillStyle =
+        "#b84a54";
+
+      context.fillRect(
+        x,
+        y,
+        width * ratio,
+        height
+      );
+
+      context.restore();
+    }
+
+    function drawDebugHud() {
+      if (!gameStarted) {
+        return;
+      }
+
+      const stateNames = {
+        patrol: "巡邏",
+        chase: "追蹤",
+        attack: "攻擊"
+      };
+
+      context.save();
+
+      context.fillStyle =
+        "rgba(0,0,0,0.48)";
+
+      context.fillRect(
+        16,
+        84,
+        350,
+        220
+      );
+
+      context.fillStyle =
+        "#ffffff";
+
+      context.font =
+        "18px Arial, Microsoft JhengHei";
+
+      context.fillText(
+        `世界：${WORLD_WIDTH} × ${WORLD_HEIGHT}`,
+        42,
+        113
+      );
+
+      context.fillText(
+        `玩家：${Math.round(
+          player.x
+        )}, ${Math.round(
+          player.y
+        )}`,
+        42,
+        139
+      );
+
+      context.fillText(
+        `玩家動作：${player.animation}`,
+        42,
+        165
+      );
+
+      context.fillText(
+        `空中攻擊：${
+          player.airAttacking
+            ? "是"
+            : "否"
+        }`,
+        42,
+        191
+      );
+
+      context.fillText(
+        `玩家控制：${
+          playerControlEnabled
+            ? "開啟"
+            : "鎖定"
+        }`,
+        42,
+        217
+      );
+
+      context.fillText(
+        `相機：${Math.round(
+          camera.x
+        )}, ${Math.round(
+          camera.y
+        )}`,
+        42,
+        243
+      );
+
+      context.fillText(
+        `ORC1：${
+          stateNames[
+            orc.state
+          ] || orc.state
+        }`,
+        42,
+        269
+      );
+
+      context.fillText(
+        `ORC Anchor：${
+          getCurrentOrcFootOffset() +
+          ORC_EXTRA_FOOT_OFFSET
+        }px`,
+        42,
+        295
+      );
+
+      context.restore();
+    }
+
+    function render() {
+      context.clearRect(
+        0,
+        0,
+        VIEW_WIDTH,
+        VIEW_HEIGHT
+      );
+
+      drawBackground();
+      drawDungeonWalls();
+      drawDungeonDecorations();
+      drawGround();
+
+      if (assetsLoaded) {
+        if (orc.opacity > 0) {
+          drawEntityShadow(
+            orc.x,
+            62,
+            13
+          );
+
+          drawOrc();
+          drawOrcHealthBar();
+        }
+
+        const playerHeight =
+          Math.max(
+            0,
+            WORLD_GROUND_Y -
+              player.y
+          );
+
+        const shadowScale =
+          clamp(
+            1 -
+              playerHeight /
+                700,
+            0.45,
+            1
+          );
+
+        drawEntityShadow(
+          player.x,
+          50 *
+            shadowScale,
+          12 *
+            shadowScale
+        );
+
+        drawPlayer();
+      }
+
+      drawPlayerHealthBar();
+      drawDebugHud();
+    }
+
+    /* ==================================================
+       鍵盤輸入
+    ================================================== */
+
+    function getControlFromKey(code) {
+      if (
+        code === attackKeyCode
+      ) {
+        return "attack";
+      }
+
+      const keyBindings = {
+        ArrowLeft: "left",
+        KeyA: "left",
+
+        ArrowRight: "right",
+        KeyD: "right",
+
+        ArrowUp: "jump",
+        KeyW: "jump",
+        Space: "jump",
+
+        ArrowDown: "duck",
+        KeyS: "duck",
+
+        ShiftLeft: "run",
+        ShiftRight: "run"
+      };
+
+      return (
+        keyBindings[code] ||
+        null
+      );
+    }
+
+    function setControl(
+      controlName,
+      active,
+      isNewPress = false
+    ) {
+      if (
+        !(controlName in input)
+      ) {
+        return;
+      }
+
+      if (
+        active &&
+        isNewPress &&
+        (
+          controlName ===
+            "jump" ||
+          controlName ===
+            "attack"
+        )
+      ) {
+        pressed[
+          controlName
+        ] = true;
+      }
+
+      input[
+        controlName
+      ] = active;
+    }
+
+    window.addEventListener(
+      "keydown",
+      (event) => {
+        if (
+          !gameStarted ||
+          !playerControlEnabled ||
+          gameFailed ||
+          document.activeElement ===
+            attackKeySelect
+        ) {
+          return;
+        }
+
+        const controlName =
+          getControlFromKey(
+            event.code
+          );
+
+        if (!controlName) {
+          return;
+        }
+
+        event.preventDefault();
+
+        setControl(
+          controlName,
+          true,
+          !input[
+            controlName
+          ]
+        );
+      }
+    );
+
+    window.addEventListener(
+      "keyup",
+      (event) => {
+        const controlName =
+          getControlFromKey(
+            event.code
+          );
+
+        if (!controlName) {
+          return;
+        }
+
+        event.preventDefault();
+
+        setControl(
+          controlName,
+          false
+        );
+      }
+    );
+
+    /* ==================================================
+       虛擬搖桿
+    ================================================== */
+
+    function updateJoystickCenter() {
+      const rect =
+        joystickBase.getBoundingClientRect();
+
+      joystick.centerX =
+        rect.left +
+        rect.width / 2;
+
+      joystick.centerY =
+        rect.top +
+        rect.height / 2;
+
+      joystick.radius =
+        rect.width * 0.34;
+    }
+
+    function updateJoystickPosition(
+      clientX,
+      clientY
+    ) {
+      const deltaX =
+        clientX -
+        joystick.centerX;
+
+      const deltaY =
+        clientY -
+        joystick.centerY;
+
+      const distance =
+        Math.hypot(
+          deltaX,
+          deltaY
+        );
+
+      const limitedDistance =
+        Math.min(
+          distance,
+          joystick.radius
+        );
+
+      const angle =
+        Math.atan2(
+          deltaY,
+          deltaX
+        );
+
+      const visualX =
+        Math.cos(
+          angle
+        ) *
+        limitedDistance;
+
+      const visualY =
+        Math.sin(
+          angle
+        ) *
+        limitedDistance;
+
+      joystickStick.style.transform =
+        `translate(
+          calc(-50% + ${visualX}px),
+          calc(-50% + ${visualY}px)
+        )`;
+
+      const normalizedX =
+        joystick.radius > 0
+          ? visualX /
+            joystick.radius
+          : 0;
+
+      const normalizedY =
+        joystick.radius > 0
+          ? visualY /
+            joystick.radius
+          : 0;
+
+      joystick.x =
+        Math.abs(
+          normalizedX
+        ) <
+        JOYSTICK_DEAD_ZONE
+          ? 0
+          : normalizedX;
+
+      joystick.y =
+        Math.abs(
+          normalizedY
+        ) <
+        JOYSTICK_DEAD_ZONE
+          ? 0
+          : normalizedY;
+
+      joystick.magnitude =
+        Math.min(
+          1,
+          Math.hypot(
+            joystick.x,
+            joystick.y
+          )
+        );
+    }
+
+    function resetJoystick() {
+      joystick.active = false;
+      joystick.pointerId = null;
+
+      joystick.x = 0;
+      joystick.y = 0;
+      joystick.magnitude = 0;
+
+      joystickStick.style.transform =
+        "translate(-50%, -50%)";
+
+      joystickZone.classList.remove(
+        "active"
+      );
+    }
+
+    joystickZone.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (
+          !gameStarted ||
+          !playerControlEnabled ||
+          gameFailed
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        updateJoystickCenter();
+
+        joystick.active = true;
+
+        joystick.pointerId =
+          event.pointerId;
+
+        joystickZone.classList.add(
+          "active"
+        );
+
+        if (
+          joystickZone.setPointerCapture
+        ) {
+          joystickZone.setPointerCapture(
+            event.pointerId
+          );
+        }
+
+        updateJoystickPosition(
+          event.clientX,
+          event.clientY
+        );
+      }
+    );
+
+    joystickZone.addEventListener(
+      "pointermove",
+      (event) => {
+        if (
+          !gameStarted ||
+          !playerControlEnabled ||
+          !joystick.active ||
+          event.pointerId !==
+            joystick.pointerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        updateJoystickPosition(
+          event.clientX,
+          event.clientY
+        );
+      }
+    );
+
+    joystickZone.addEventListener(
+      "pointerup",
+      resetJoystick
+    );
+
+    joystickZone.addEventListener(
+      "pointercancel",
+      resetJoystick
+    );
+
+    joystickZone.addEventListener(
+      "lostpointercapture",
+      resetJoystick
+    );
+
+    /* ==================================================
+       手機按鈕
+    ================================================== */
+
+    document
+      .querySelectorAll(
+        ".action-button"
+      )
+      .forEach((button) => {
+        const controlName =
+          button.dataset.control;
+
+        function activate(event) {
+          if (
+            !gameStarted ||
+            !playerControlEnabled
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+
+          button.classList.add(
+            "active"
+          );
+
+          setControl(
+            controlName,
+            true,
+            !input[
+              controlName
+            ]
+          );
+
+          if (
+            button.setPointerCapture
+          ) {
+            button.setPointerCapture(
+              event.pointerId
+            );
+          }
+        }
+
+        function deactivate(event) {
+          event.preventDefault();
+
+          button.classList.remove(
+            "active"
+          );
+
+          setControl(
+            controlName,
+            false
+          );
+        }
+
+        button.addEventListener(
+          "pointerdown",
+          activate
+        );
+
+        button.addEventListener(
+          "pointerup",
+          deactivate
+        );
+
+        button.addEventListener(
+          "pointercancel",
+          deactivate
+        );
+
+        button.addEventListener(
+          "lostpointercapture",
+          deactivate
+        );
+
+        button.addEventListener(
+          "contextmenu",
+          (event) => {
+            event.preventDefault();
+          }
+        );
+      });
+
+    /* ==================================================
+       輸入重置
+    ================================================== */
+
+    function resetAllInputs() {
+      for (
+        const controlName of
+        Object.keys(input)
+      ) {
+        input[
+          controlName
+        ] = false;
+      }
+
+      pressed.jump = false;
+      pressed.attack = false;
+
+      resetJoystick();
+
+      document
+        .querySelectorAll(
+          ".action-button"
+        )
+        .forEach((button) => {
+          button.classList.remove(
+            "active"
+          );
+        });
+    }
+
+    window.addEventListener(
+      "blur",
+      resetAllInputs
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.hidden) {
+          resetAllInputs();
+        }
+      }
+    );
+
+    window.addEventListener(
+      "resize",
+      () => {
+        handleOrientationState();
+
+        window.setTimeout(
+          () => {
+            updateJoystickCenter();
+          },
+          100
+        );
+      }
+    );
+
+    window.addEventListener(
+      "orientationchange",
+      () => {
+        resetAllInputs();
+
+        window.setTimeout(
+          () => {
+            handleOrientationState();
+            updateJoystickCenter();
+          },
+          250
+        );
+      }
+    );
+
+    /* ==================================================
+       遊戲循環
+    ================================================== */
+
+    function gameLoop(
+      currentTime
+    ) {
+      const rawDeltaTime =
+        (
+          currentTime -
+          previousTime
+        ) /
+        1000;
+
+      const deltaTime =
+        Math.min(
+          rawDeltaTime,
+          1 / 30
+        );
+
+      previousTime =
+        currentTime;
+
+      updatePlayer(
+        deltaTime
+      );
+
+      updateOrc(
+        deltaTime
+      );
+
+      resolveCombat();
+
+      if (gameStarted) {
+        updateCamera(
+          deltaTime
+        );
+      }
+
+      render();
+
+      requestAnimationFrame(
+        gameLoop
+      );
+    }
+
+    /* ==================================================
+       初始化
+    ================================================== */
+
+    function initializeGame() {
+      if (!gameLoopStarted) {
+        gameLoopStarted = true;
+
+        requestAnimationFrame(
+          gameLoop
+        );
+      }
+
+      if (
+        isTouchDevice() &&
+        isPortrait()
+      ) {
+        showOrientationScreen();
+      } else {
+        startLoadingSequence();
+      }
+    }
+
+    initializeGame();
+  </script>
 </body>
 </html>

@@ -11,10 +11,6 @@
   <title>Hooded Escape</title>
 
   <style>
-    /* ==================================================
-       基礎設定
-    ================================================== */
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -45,10 +41,6 @@
     select {
       font: inherit;
     }
-
-    /* ==================================================
-       遊戲容器
-    ================================================== */
 
     #game-wrapper {
       position: relative;
@@ -99,8 +91,8 @@
       pointer-events: none;
 
       transition:
-        opacity 0.6s ease,
-        visibility 0.6s ease;
+        opacity 0.65s ease,
+        visibility 0.65s ease;
     }
 
     #orientation-screen.visible {
@@ -233,7 +225,7 @@
         radial-gradient(
           circle at 50% 42%,
           rgba(48, 58, 80, 0.62) 0%,
-          rgba(14, 18, 28, 0.96) 48%,
+          rgba(14, 18, 28, 0.98) 48%,
           #07090e 100%
         );
 
@@ -244,6 +236,11 @@
       transition:
         opacity 0.8s ease,
         visibility 0.8s ease;
+    }
+
+    #loading-page.prepared {
+      visibility: visible;
+      pointer-events: none;
     }
 
     #loading-page.visible {
@@ -337,7 +334,7 @@
 
     #loading-page.visible .game-logo {
       animation:
-        logoFadeIn 0.9s 0.25s ease forwards;
+        logoFadeIn 0.9s 0.2s ease forwards;
     }
 
     .logo-main {
@@ -571,8 +568,7 @@
       opacity: 0;
       visibility: hidden;
 
-      transition:
-        opacity 0.4s ease;
+      transition: opacity 0.4s ease;
 
       pointer-events: none;
     }
@@ -600,8 +596,7 @@
       opacity: 0;
       visibility: hidden;
 
-      transition:
-        opacity 0.4s ease;
+      transition: opacity 0.4s ease;
     }
 
     #attack-key-select {
@@ -635,8 +630,7 @@
       opacity: 0;
       visibility: hidden;
 
-      transition:
-        opacity 0.4s ease;
+      transition: opacity 0.4s ease;
 
       pointer-events: none;
     }
@@ -784,10 +778,6 @@
       margin-bottom: clamp(38px, 5vw, 68px);
     }
 
-    /* ==================================================
-       裝置顯示
-    ================================================== */
-
     @media (hover: hover) and (pointer: fine) {
       #touch-controls {
         display: none;
@@ -828,7 +818,6 @@
       tabindex="0"
     ></canvas>
 
-    <!-- 手機直向提示 -->
     <section
       id="orientation-screen"
       aria-label="請旋轉手機"
@@ -851,7 +840,6 @@
       </div>
     </section>
 
-    <!-- Loading Page -->
     <section
       id="loading-page"
       aria-label="遊戲載入畫面"
@@ -892,13 +880,11 @@
       </div>
     </section>
 
-    <!-- 電腦版操作提示 -->
     <div id="desktop-help">
       方向鍵移動｜↑ 跳躍｜↓ 蹲下｜Shift 跑步｜攻擊：
       <span id="attack-key-label">Z</span>
     </div>
 
-    <!-- 電腦版攻擊鍵設定 -->
     <div id="keyboard-settings">
       <label for="attack-key-select">
         攻擊鍵
@@ -915,7 +901,6 @@
       </select>
     </div>
 
-    <!-- 手機版操作 -->
     <div id="touch-controls">
       <div id="joystick-zone">
         <div id="joystick-base">
@@ -949,10 +934,6 @@
 
   <script>
     "use strict";
-
-    /* ==================================================
-       DOM
-    ================================================== */
 
     const canvas =
       document.getElementById("game-canvas");
@@ -989,10 +970,6 @@
 
     context.imageSmoothingEnabled = false;
 
-    /* ==================================================
-       遊戲設定
-    ================================================== */
-
     const GAME_WIDTH = 1280;
     const GAME_HEIGHT = 720;
 
@@ -1009,12 +986,7 @@
     const RUN_THRESHOLD = 0.72;
     const DUCK_THRESHOLD = 0.62;
 
-    const ORIENTATION_FADE_TIME = 600;
-    const LOADING_FADE_DELAY = 80;
-
-    /* ==================================================
-       狀態
-    ================================================== */
+    const ORIENTATION_FADE_TIME = 650;
 
     let assetsLoaded = false;
     let fakeLoadingCompleted = false;
@@ -1023,32 +995,43 @@
     let gameLoopStarted = false;
     let orientationTransitioning = false;
 
-    let previousTime = performance.now();
-
-    /* ==================================================
-       裝置判斷
-    ================================================== */
+    let previousTime =
+      performance.now();
 
     function isTouchDevice() {
       return (
-        window.matchMedia("(pointer: coarse)").matches ||
-        window.matchMedia("(hover: none)").matches
+        window.matchMedia(
+          "(pointer: coarse)"
+        ).matches ||
+        window.matchMedia(
+          "(hover: none)"
+        ).matches
       );
     }
 
     function isPortrait() {
-      return window.innerHeight > window.innerWidth;
+      return (
+        window.innerHeight >
+        window.innerWidth
+      );
     }
 
     function wait(milliseconds) {
       return new Promise((resolve) => {
-        window.setTimeout(resolve, milliseconds);
+        window.setTimeout(
+          resolve,
+          milliseconds
+        );
       });
     }
 
-    /* ==================================================
-       攻擊鍵設定
-    ================================================== */
+    function waitForNextPaint() {
+      return new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(resolve);
+        });
+      });
+    }
 
     const ATTACK_KEY_STORAGE =
       "hoodedCharacterAttackKey";
@@ -1072,7 +1055,8 @@
       attackKeyCode = "KeyZ";
     }
 
-    attackKeySelect.value = attackKeyCode;
+    attackKeySelect.value =
+      attackKeyCode;
 
     attackKeyLabel.textContent =
       allowedAttackKeys[attackKeyCode];
@@ -1095,10 +1079,6 @@
         canvas.focus();
       }
     );
-
-    /* ==================================================
-       動畫素材
-    ================================================== */
 
     const animationDefinitions = {
       idle: {
@@ -1152,10 +1132,6 @@
 
     const animations = {};
 
-    /* ==================================================
-       輸入狀態
-    ================================================== */
-
     const input = {
       left: false,
       right: false,
@@ -1183,10 +1159,6 @@
       magnitude: 0
     };
 
-    /* ==================================================
-       玩家
-    ================================================== */
-
     const player = {
       x: 200,
       y: GROUND_Y,
@@ -1208,12 +1180,11 @@
       frameTimer: 0
     };
 
-    /* ==================================================
-       圖片載入
-    ================================================== */
-
     function padNumber(number) {
-      return String(number).padStart(2, "0");
+      return String(number).padStart(
+        2,
+        "0"
+      );
     }
 
     function createFramePath(
@@ -1272,7 +1243,8 @@
 
         for (
           let frameNumber = 1;
-          frameNumber <= definition.frameCount;
+          frameNumber <=
+            definition.frameCount;
           frameNumber += 1
         ) {
           const path =
@@ -1295,12 +1267,10 @@
         }
       }
 
-      await Promise.all(loadingTasks);
+      await Promise.all(
+        loadingTasks
+      );
     }
-
-    /* ==================================================
-       Loading 畫面
-    ================================================== */
 
     function setLoadingProgress(
       progress,
@@ -1316,7 +1286,9 @@
         `${safeProgress}%`;
 
       progressNumber.textContent =
-        `${Math.floor(safeProgress)}%`;
+        `${Math.floor(
+          safeProgress
+        )}%`;
 
       if (message) {
         loadingMessage.textContent =
@@ -1362,7 +1334,9 @@
           );
 
           if (ratio < 1) {
-            requestAnimationFrame(update);
+            requestAnimationFrame(
+              update
+            );
           } else {
             resolve();
           }
@@ -1454,6 +1428,12 @@
       loadingSequenceStarted = true;
 
       loadingPage.classList.add(
+        "prepared"
+      );
+
+      await waitForNextPaint();
+
+      loadingPage.classList.add(
         "visible"
       );
 
@@ -1484,9 +1464,15 @@
       }
     }
 
-    /* ==================================================
-       直向與橫向切換
-    ================================================== */
+    function showOrientationScreen() {
+      orientationScreen.classList.remove(
+        "fade-out"
+      );
+
+      orientationScreen.classList.add(
+        "visible"
+      );
+    }
 
     async function leaveOrientationScreen() {
       if (
@@ -1500,9 +1486,33 @@
 
       orientationTransitioning = true;
 
+      /*
+        先讓 Loading Page 進入 DOM 可見狀態，
+        但仍保持透明，並位於提示畫面下方。
+      */
+      loadingPage.classList.add(
+        "prepared"
+      );
+
+      await waitForNextPaint();
+
+      /*
+        同一時間：
+        Loading Page 淡入。
+        提示畫面淡出。
+      */
+      loadingPage.classList.add(
+        "visible"
+      );
+
       orientationScreen.classList.add(
         "fade-out"
       );
+
+      /*
+        開始真正的素材及假進度讀取。
+      */
+      startLoadingSequence();
 
       await wait(
         ORIENTATION_FADE_TIME
@@ -1513,23 +1523,7 @@
         "fade-out"
       );
 
-      await wait(
-        LOADING_FADE_DELAY
-      );
-
-      startLoadingSequence();
-
       orientationTransitioning = false;
-    }
-
-    function showOrientationScreen() {
-      orientationScreen.classList.remove(
-        "fade-out"
-      );
-
-      orientationScreen.classList.add(
-        "visible"
-      );
     }
 
     function handleOrientationState() {
@@ -1542,7 +1536,10 @@
 
       if (isPortrait()) {
         showOrientationScreen();
-      } else if (
+        return;
+      }
+
+      if (
         orientationScreen.classList.contains(
           "visible"
         )
@@ -1552,10 +1549,6 @@
         startLoadingSequence();
       }
     }
-
-    /* ==================================================
-       開始遊戲
-    ================================================== */
 
     function startGame() {
       if (
@@ -1589,10 +1582,6 @@
       "click",
       startGame
     );
-
-    /* ==================================================
-       動畫控制
-    ================================================== */
 
     function setAnimation(
       animationName,
@@ -1666,7 +1655,8 @@
         return;
       }
 
-      player.frameTimer += deltaTime;
+      player.frameTimer +=
+        deltaTime;
 
       while (
         player.frameTimer >=
@@ -1703,10 +1693,6 @@
       }
     }
 
-    /* ==================================================
-       玩家控制
-    ================================================== */
-
     function triggerJump() {
       if (
         !gameStarted ||
@@ -1719,9 +1705,13 @@
 
       player.grounded = false;
       player.ducking = false;
-      player.velocityY = -JUMP_FORCE;
+      player.velocityY =
+        -JUMP_FORCE;
 
-      setAnimation("jump", true);
+      setAnimation(
+        "jump",
+        true
+      );
     }
 
     function triggerAttack() {
@@ -1736,7 +1726,10 @@
       player.ducking = false;
       player.velocityX = 0;
 
-      setAnimation("attack", true);
+      setAnimation(
+        "attack",
+        true
+      );
     }
 
     function choosePlayerAnimation(
@@ -1865,7 +1858,8 @@
 
       if (!player.grounded) {
         player.velocityY +=
-          GRAVITY * deltaTime;
+          GRAVITY *
+          deltaTime;
       }
 
       player.x +=
@@ -1901,10 +1895,6 @@
       updateAnimation(deltaTime);
     }
 
-    /* ==================================================
-       Canvas 繪製
-    ================================================== */
-
     function drawBackground() {
       const gradient =
         context.createLinearGradient(
@@ -1924,7 +1914,8 @@
         "#111722"
       );
 
-      context.fillStyle = gradient;
+      context.fillStyle =
+        gradient;
 
       context.fillRect(
         0,
@@ -1933,16 +1924,19 @@
         GAME_HEIGHT
       );
 
-      context.fillStyle = "#303846";
+      context.fillStyle =
+        "#303846";
 
       context.fillRect(
         0,
         GROUND_Y,
         GAME_WIDTH,
-        GAME_HEIGHT - GROUND_Y
+        GAME_HEIGHT -
+          GROUND_Y
       );
 
-      context.fillStyle = "#697588";
+      context.fillStyle =
+        "#697588";
 
       context.fillRect(
         0,
@@ -1955,8 +1949,11 @@
     function drawPlayerShadow() {
       context.save();
 
-      context.globalAlpha = 0.25;
-      context.fillStyle = "#000000";
+      context.globalAlpha =
+        0.25;
+
+      context.fillStyle =
+        "#000000";
 
       context.beginPath();
 
@@ -2058,7 +2055,8 @@
         72
       );
 
-      context.fillStyle = "#ffffff";
+      context.fillStyle =
+        "#ffffff";
 
       context.font =
         "22px Arial, Microsoft JhengHei";
@@ -2104,10 +2102,6 @@
       drawStatus();
     }
 
-    /* ==================================================
-       鍵盤
-    ================================================== */
-
     function getControlFromKey(code) {
       if (code === attackKeyCode) {
         return "attack";
@@ -2131,7 +2125,10 @@
         ShiftRight: "run"
       };
 
-      return keyBindings[code] || null;
+      return (
+        keyBindings[code] ||
+        null
+      );
     }
 
     function setControl(
@@ -2139,7 +2136,9 @@
       active,
       isNewPress = false
     ) {
-      if (!(controlName in input)) {
+      if (
+        !(controlName in input)
+      ) {
         return;
       }
 
@@ -2151,10 +2150,14 @@
           controlName === "attack"
         )
       ) {
-        pressed[controlName] = true;
+        pressed[
+          controlName
+        ] = true;
       }
 
-      input[controlName] = active;
+      input[
+        controlName
+      ] = active;
     }
 
     window.addEventListener(
@@ -2207,10 +2210,6 @@
         );
       }
     );
-
-    /* ==================================================
-       虛擬搖桿
-    ================================================== */
 
     const joystickZone =
       document.getElementById(
@@ -2356,9 +2355,13 @@
           "active"
         );
 
-        joystickZone.setPointerCapture(
-          event.pointerId
-        );
+        if (
+          joystickZone.setPointerCapture
+        ) {
+          joystickZone.setPointerCapture(
+            event.pointerId
+          );
+        }
 
         updateJoystickPosition(
           event.clientX,
@@ -2403,10 +2406,6 @@
       resetJoystick
     );
 
-    /* ==================================================
-       手機動作按鈕
-    ================================================== */
-
     document
       .querySelectorAll(
         ".action-button"
@@ -2432,9 +2431,13 @@
             !input[controlName]
           );
 
-          button.setPointerCapture(
-            event.pointerId
-          );
+          if (
+            button.setPointerCapture
+          ) {
+            button.setPointerCapture(
+              event.pointerId
+            );
+          }
         }
 
         function deactivate(event) {
@@ -2471,16 +2474,14 @@
         );
       });
 
-    /* ==================================================
-       重置
-    ================================================== */
-
     function resetAllInputs() {
       for (
         const controlName of
         Object.keys(input)
       ) {
-        input[controlName] = false;
+        input[
+          controlName
+        ] = false;
       }
 
       pressed.jump = false;
@@ -2536,10 +2537,6 @@
       }
     );
 
-    /* ==================================================
-       遊戲循環
-    ================================================== */
-
     function gameLoop(currentTime) {
       const rawDeltaTime =
         (
@@ -2563,10 +2560,6 @@
         gameLoop
       );
     }
-
-    /* ==================================================
-       初始化
-    ================================================== */
 
     function initializeGame() {
       if (!gameLoopStarted) {

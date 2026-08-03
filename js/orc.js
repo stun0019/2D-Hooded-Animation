@@ -510,6 +510,10 @@ function updateEnemyPatrol(
 ) {
   enemy.state = "patrol";
 
+  /*
+    敵人抵達巡邏邊界後，
+    先原地等待指定時間。
+  */
   if (
     enemy.patrolWaitTimer >
     0
@@ -531,6 +535,10 @@ function updateEnemyPatrol(
     return;
   }
 
+  /*
+    等待結束後，
+    依照新的巡邏方向繼續移動。
+  */
   enemy.velocityX =
     enemy.patrolDirection *
     enemy.patrolSpeed;
@@ -618,6 +626,10 @@ function resolveEnemyPatrolBoundary(
     return;
   }
 
+  /*
+    抵達左側邊界：
+    固定位置、改向右、開始等待。
+  */
   if (
     enemy.x <=
     enemy.patrolMinX
@@ -645,6 +657,10 @@ function resolveEnemyPatrolBoundary(
     return;
   }
 
+  /*
+    抵達右側邊界：
+    固定位置、改向左、開始等待。
+  */
   if (
     enemy.x >=
     enemy.patrolMaxX
@@ -703,7 +719,7 @@ function updateEnemy(
   }
 
   /*
-    STAGE Intro 或 FAIL 期間，
+    Stage Intro 或 FAIL 期間，
     存活敵人停止行動。
   */
   if (
@@ -729,6 +745,9 @@ function updateEnemy(
     return;
   }
 
+  /*
+    更新攻擊冷卻。
+  */
   if (
     enemy.attackCooldown >
     0
@@ -764,6 +783,9 @@ function updateEnemy(
       differenceX
     );
 
+  /*
+    根據玩家距離決定行為。
+  */
   if (
     distanceX <=
     enemy.attackRange
@@ -787,14 +809,41 @@ function updateEnemy(
     );
   }
 
+  /*
+    套用本幀水平移動。
+  */
   enemy.x +=
     enemy.velocityX *
     deltaTime;
 
-  resolveEnemyPatrolBoundary(
-    enemy
-  );
+  /*
+    修正內容：
 
+    只有敵人正在巡邏移動時，
+    才檢查是否抵達巡邏邊界。
+
+    敵人在邊界等待期間：
+    - patrolWaitTimer > 0
+    - velocityX = 0
+
+    因此不會再次執行邊界判定，
+    也不會每一幀把等待時間重設。
+  */
+  if (
+    enemy.state ===
+      "patrol" &&
+    enemy.patrolWaitTimer <=
+      0 &&
+    enemy.velocityX !== 0
+  ) {
+    resolveEnemyPatrolBoundary(
+      enemy
+    );
+  }
+
+  /*
+    世界左右邊界限制。
+  */
   enemy.x = clamp(
     enemy.x,
     80,

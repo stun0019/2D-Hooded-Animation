@@ -1,20 +1,26 @@
 "use strict";
 
-/* 玩家動畫、控制與繪製 */
+/*
+  Hooded Escape
+
+  玩家動畫、移動、跳躍、攻擊、
+  Hurt 動畫與角色繪製。
+*/
 
 /* ==================================================
-   玩家動畫
+   玩家動畫切換
 ================================================== */
 
 function setPlayerAnimation(
   animationName,
   restart = false
 ) {
-  if (
-    !playerAnimations[
+  const animation =
+    playerAnimations[
       animationName
-    ]
-  ) {
+    ];
+
+  if (!animation) {
     return;
   }
 
@@ -29,19 +35,37 @@ function setPlayerAnimation(
     player.frameIndex = 0;
     player.frameTimer = 0;
 
+    /*
+      每次開始新的攻擊時，
+      清除上一次攻擊命中的敵人紀錄。
+    */
     if (
       animationName ===
       "attack"
     ) {
-      player.attackHitRegistered =
-        false;
+      player
+        .attackHitEnemyIds
+        .clear();
     }
   }
 }
 
+/* ==================================================
+   玩家攻擊動畫完成
+================================================== */
+
 function completePlayerAttack() {
   player.attacking = false;
   player.airAttacking = false;
+
+  if (player.hurt) {
+    setPlayerAnimation(
+      "hurt",
+      true
+    );
+
+    return;
+  }
 
   if (player.grounded) {
     setPlayerAnimation(
@@ -55,6 +79,74 @@ function completePlayerAttack() {
     );
   }
 }
+
+/* ==================================================
+   玩家 Hurt 動畫
+================================================== */
+
+function triggerPlayerHurt() {
+  if (
+    player.hp <= 0 ||
+    gameFailed
+  ) {
+    return;
+  }
+
+  /*
+    已經處於 Hurt 狀態時，
+    不重新啟動同一段動畫。
+  */
+  if (player.hurt) {
+    return;
+  }
+
+  player.hurt = true;
+
+  player.ducking = false;
+
+  player.attacking = false;
+  player.airAttacking = false;
+
+  player.velocityX = 0;
+
+  pressed.jump = false;
+  pressed.attack = false;
+
+  input.jump = false;
+  input.attack = false;
+
+  setPlayerAnimation(
+    "hurt",
+    true
+  );
+}
+
+function completePlayerHurt() {
+  player.hurt = false;
+
+  if (
+    player.hp <= 0 ||
+    gameFailed
+  ) {
+    return;
+  }
+
+  if (player.grounded) {
+    setPlayerAnimation(
+      "idle",
+      true
+    );
+  } else {
+    setPlayerAnimation(
+      "jump",
+      true
+    );
+  }
+}
+
+/* ==================================================
+   玩家動畫更新
+================================================== */
 
 function updatePlayerAnimation(
   deltaTime
@@ -71,12 +163,17 @@ function updatePlayerAnimation(
     return;
   }
 
+  /*
+    Jump 動畫依照玩家的垂直速度，
+    直接選擇對應影格。
+  */
   if (
     player.animation ===
     "jump"
   ) {
     const lastFrame =
-      animation.frames.length - 1;
+      animation.frames.length -
+      1;
 
     if (
       player.velocityY < -520
@@ -165,6 +262,15 @@ function updatePlayerAnimation(
           "attack"
         ) {
           completePlayerAttack();
+          return;
+        }
+
+        if (
+          player.animation ===
+          "hurt"
+        ) {
+          completePlayerHurt();
+          return;
         }
       }
     }
@@ -172,13 +278,15 @@ function updatePlayerAnimation(
 }
 
 /* ==================================================
-   玩家控制
+   玩家跳躍
 ================================================== */
 
 function triggerJump() {
   if (
     !gameStarted ||
     !playerControlEnabled ||
+    gameFailed ||
+    player.hurt ||
     !player.grounded ||
     player.attacking ||
     player.ducking
@@ -198,10 +306,16 @@ function triggerJump() {
   );
 }
 
+/* ==================================================
+   玩家攻擊
+================================================== */
+
 function triggerPlayerAttack() {
   if (
     !gameStarted ||
     !playerControlEnabled ||
+    gameFailed ||
+    player.hurt ||
     player.attacking ||
     player.ducking
   ) {
@@ -223,6 +337,79 @@ function triggerPlayerAttack() {
   );
 }
 
+/* ==================================================
+   Hurt 狀態更新
+================================================== */
+
+function updatePlayerHurtState(
+  deltaTime
+) {
+  player.ducking = false;
+
+  player.attacking = false;
+  player.airAttacking = false;
+
+  player.velocityX = 0;
+
+  pressed.jump = false;
+  pressed.attack = false;
+
+  /*
+    玩家在空中受傷時，
+    Hurt 動畫仍會受到重力影響。
+  */
+  if (!player.grounded) {
+    player.velocityY +=
+      GRAVITY *
+      deltaTime;
+  }
+
+  player.x +=
+    player.velocityX *
+    deltaTime;
+
+  player.y +=
+    player.velocityY *
+    deltaTime;
+
+  player.x = clamp(
+    player.x,
+    52,
+    WORLD_WIDTH - 52
+  );
+
+  if (
+    player.y >=
+    WORLD_GROUND_Y
+  ) {
+    player.y =
+      WORLD_GROUND_Y;
+
+    player.velocityY = 0;
+    player.grounded = true;
+  }
+
+  if (
+    player.y < 100
+  ) {
+    player.y = 100;
+
+    if (
+      player.velocityY < 0
+    ) {
+      player.velocityY = 0;
+    }
+  }
+
+  updatePlayerAnimation(
+    deltaTime
+  );
+}
+
+/* ==================================================
+   玩家更新
+================================================== */
+
 function updatePlayer(
   deltaTime
 ) {
@@ -237,8 +424,8 @@ function updatePlayer(
   }
 
   /*
-    Stage Intro、FAIL 期間：
-    玩家固定保持 Idle，不能移動或攻擊。
+    STAGE 1 開場或 FAIL 期間，
+    玩家保持 Idle 並停止操作。
   */
   if (
     !playerControlEnabled ||
@@ -252,8 +439,10 @@ function updatePlayer(
 
     player.grounded = true;
     player.ducking = false;
+
     player.attacking = false;
     player.airAttacking = false;
+    player.hurt = false;
 
     pressed.jump = false;
     pressed.attack = false;
@@ -269,6 +458,9 @@ function updatePlayer(
     return;
   }
 
+  /*
+    更新玩家受傷後的無敵時間。
+  */
   if (
     player.invincibleTimer > 0
   ) {
@@ -278,6 +470,17 @@ function updatePlayer(
         player.invincibleTimer -
           deltaTime
       );
+  }
+
+  /*
+    Hurt 狀態具有最高動畫優先權。
+  */
+  if (player.hurt) {
+    updatePlayerHurtState(
+      deltaTime
+    );
+
+    return;
   }
 
   if (pressed.jump) {
@@ -293,8 +496,12 @@ function updatePlayer(
   }
 
   let horizontalDirection =
-    Number(input.right) -
-    Number(input.left);
+    Number(
+      input.right
+    ) -
+    Number(
+      input.left
+    );
 
   let analogStrength =
     Math.abs(
@@ -323,8 +530,13 @@ function updatePlayer(
       joystickDucking
     ) &&
     player.grounded &&
-    !player.attacking;
+    !player.attacking &&
+    !player.hurt;
 
+  /*
+    玩家不是攻擊或蹲下時，
+    才能正常水平移動。
+  */
   if (
     !player.attacking &&
     !player.ducking
@@ -371,6 +583,9 @@ function updatePlayer(
       }
     }
   } else {
+    /*
+      空中攻擊期間保留原本的水平速度。
+    */
     if (
       !player.airAttacking
     ) {
@@ -384,6 +599,9 @@ function updatePlayer(
     }
   }
 
+  /*
+    空中狀態套用重力。
+  */
   if (!player.grounded) {
     player.velocityY +=
       GRAVITY *
@@ -412,6 +630,9 @@ function updatePlayer(
     WORLD_WIDTH - 52
   );
 
+  /*
+    玩家落地。
+  */
   if (
     player.y >=
     WORLD_GROUND_Y
@@ -439,7 +660,12 @@ function updatePlayer(
     }
   }
 
-  if (player.y < 100) {
+  /*
+    世界頂部限制。
+  */
+  if (
+    player.y < 100
+  ) {
     player.y = 100;
 
     if (
@@ -471,13 +697,16 @@ function drawPlayer() {
     return;
   }
 
+  const safeFrameIndex =
+    Math.min(
+      player.frameIndex,
+      animation.frames.length -
+        1
+    );
+
   const frame =
     animation.frames[
-      Math.min(
-        player.frameIndex,
-        animation.frames.length -
-          1
-      )
+      safeFrameIndex
     ];
 
   if (!frame) {
@@ -510,10 +739,14 @@ function drawPlayer() {
   if (
     player.invincibleTimer > 0 &&
     Math.floor(
-      player.invincibleTimer * 20
-    ) % 2 === 0
+      player.invincibleTimer *
+      20
+    ) %
+      2 ===
+    0
   ) {
-    context.globalAlpha = 0.4;
+    context.globalAlpha =
+      0.4;
   }
 
   context.translate(
@@ -532,15 +765,19 @@ function drawPlayer() {
 
   context.drawImage(
     frame,
+
     Math.round(
       -drawWidth / 2
     ),
+
     Math.round(
       -drawHeight
     ),
+
     Math.round(
       drawWidth
     ),
+
     Math.round(
       drawHeight
     )

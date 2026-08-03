@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   >
 
-  <title>Hooded Escape V0.5.1</title>
+  <title>Hooded Escape V0.5.2</title>
 
   <style>
     * {
@@ -49,10 +49,6 @@
     select {
       font: inherit;
     }
-
-    /* ==================================================
-       遊戲容器
-    ================================================== */
 
     #game-wrapper {
       position: relative;
@@ -1009,7 +1005,7 @@
     context.imageSmoothingEnabled = false;
 
     /* ==================================================
-       世界與畫面
+       世界與角色參數
     ================================================== */
 
     const VIEW_WIDTH = 1280;
@@ -1026,12 +1022,19 @@
     const JUMP_FORCE = 820;
 
     const PLAYER_SCALE = 2.6;
+    const ENEMY_SCALE = 2.3;
 
     /*
-      V0.5.1：
-      ORC1 比例由 1.4 提高至 2.3。
+      ORC1 各動畫腳底 Anchor 補償。
+
+      數字為原始 64 × 64 圖片中的透明像素量，
+      最後會乘上 ENEMY_SCALE。
     */
-    const ENEMY_SCALE = 2.3;
+    const ORC_FOOT_OFFSETS = {
+      idle: 6,
+      walk: 6,
+      attack: 6
+    };
 
     const CAMERA_FOLLOW_SPEED = 5.5;
 
@@ -1054,9 +1057,6 @@
     const ORC_ATTACK_COOLDOWN = 1.1;
     const ORC_PATROL_WAIT_TIME = 1;
 
-    /*
-      大型敵人的畫面外繪製緩衝。
-    */
     const ORC_DRAW_MARGIN = 260;
 
     /* ==================================================
@@ -1075,10 +1075,6 @@
     let previousTime =
       performance.now();
 
-    /* ==================================================
-       相機
-    ================================================== */
-
     const camera = {
       x: 0,
       y: 0,
@@ -1086,10 +1082,6 @@
       targetX: 0,
       targetY: 0
     };
-
-    /* ==================================================
-       玩家
-    ================================================== */
 
     const player = {
       x: 340,
@@ -1110,23 +1102,12 @@
       frameTimer: 0
     };
 
-    /* ==================================================
-       ORC1
-    ================================================== */
-
     const orc = {
       x: 1100,
       y: WORLD_GROUND_Y,
 
       velocityX: 0,
 
-      /*
-        AI 方向定義：
-        1  = 世界右方
-        -1 = 世界左方
-
-        繪製時會另外反轉素材 X 軸。
-      */
       facing: -1,
 
       animation: "idle",
@@ -1178,7 +1159,7 @@
     };
 
     /* ==================================================
-       玩家動畫
+       動畫定義
     ================================================== */
 
     const playerAnimationDefinitions = {
@@ -1231,10 +1212,6 @@
       }
     };
 
-    /* ==================================================
-       ORC1 動畫
-    ================================================== */
-
     const enemyAnimationDefinitions = {
       idle: {
         folder: "Idle",
@@ -1265,7 +1242,7 @@
     const enemyAnimations = {};
 
     /* ==================================================
-       工具
+       工具函式
     ================================================== */
 
     function clamp(
@@ -1901,7 +1878,9 @@
               player.attacking = false;
 
               setPlayerAnimation(
-                "idle",
+                player.grounded
+                  ? "idle"
+                  : "jump",
                 true
               );
             }
@@ -2017,16 +1996,25 @@
     }
 
     function triggerPlayerAttack() {
+      /*
+        V0.5.2 修正：
+
+        現階段沒有空中攻擊動畫，因此空中按攻擊時
+        直接忽略，不建立 attacking 狀態。
+
+        避免攻擊狀態被 Jump 動畫覆蓋後，
+        attacking 永遠無法在攻擊動畫結束時清除。
+      */
       if (
         !gameStarted ||
-        player.attacking
+        !player.grounded ||
+        player.attacking ||
+        player.ducking
       ) {
         return;
       }
 
       player.attacking = true;
-      player.ducking = false;
-
       player.velocityX = 0;
 
       setPlayerAnimation(
@@ -2055,7 +2043,29 @@
       if (pressed.attack) {
         triggerPlayerAttack();
 
+        /*
+          不論攻擊成功或因空中狀態被拒絕，
+          都立即消耗本次 Press，避免落地後自動補攻擊。
+        */
         pressed.attack = false;
+      }
+
+      /*
+        安全保護：
+
+        若未來其他流程讓玩家在空中意外保留 attacking，
+        立即清除並切回 Jump，避免操作永久鎖死。
+      */
+      if (
+        !player.grounded &&
+        player.attacking
+      ) {
+        player.attacking = false;
+
+        setPlayerAnimation(
+          "jump",
+          true
+        );
       }
 
       let horizontalDirection =
@@ -2116,17 +2126,21 @@
               ? 1
               : -1;
 
-          setPlayerAnimation(
-            shouldRun
-              ? "run"
-              : "walk"
-          );
+          if (player.grounded) {
+            setPlayerAnimation(
+              shouldRun
+                ? "run"
+                : "walk"
+            );
+          }
         } else {
           player.velocityX = 0;
 
-          setPlayerAnimation(
-            "idle"
-          );
+          if (player.grounded) {
+            setPlayerAnimation(
+              "idle"
+            );
+          }
         }
       } else {
         player.velocityX = 0;
@@ -2166,16 +2180,29 @@
         player.y >=
         WORLD_GROUND_Y
       ) {
+        const wasAirborne =
+          !player.grounded;
+
         player.y =
           WORLD_GROUND_Y;
 
         player.velocityY = 0;
         player.grounded = true;
+
+        if (wasAirborne) {
+          setPlayerAnimation(
+            "idle",
+            true
+          );
+        }
       }
 
       if (player.y < 100) {
         player.y = 100;
-        player.velocityY = 0;
+
+        if (player.velocityY < 0) {
+          player.velocityY = 0;
+        }
       }
 
       updatePlayerAnimation(
@@ -2246,9 +2273,6 @@
       const distanceX =
         Math.abs(differenceX);
 
-      /*
-        近戰攻擊狀態。
-      */
       if (
         distanceX <=
         ORC_ATTACK_RANGE
@@ -2268,12 +2292,7 @@
             "idle"
           );
         }
-      }
-
-      /*
-        追蹤玩家。
-      */
-      else if (
+      } else if (
         distanceX <=
         ORC_DETECTION_RANGE
       ) {
@@ -2294,12 +2313,7 @@
         setOrcAnimation(
           "walk"
         );
-      }
-
-      /*
-        巡邏。
-      */
-      else {
+      } else {
         orc.state = "patrol";
 
         if (orc.patrolWaitTimer > 0) {
@@ -2773,8 +2787,11 @@
         0,
         screenGroundY,
         VIEW_WIDTH,
-        VIEW_HEIGHT -
-          screenGroundY
+        Math.max(
+          0,
+          VIEW_HEIGHT -
+            screenGroundY
+        )
       );
 
       context.fillStyle =
@@ -2974,16 +2991,6 @@
           orc.x
         );
 
-      const screenY =
-        worldToScreenY(
-          orc.y
-        );
-
-      /*
-        V0.5.1：
-        擴大畫面外繪製緩衝，
-        避免 2.3 倍大型敵人在邊緣突然消失。
-      */
       if (
         screenX < -ORC_DRAW_MARGIN ||
         screenX >
@@ -2992,6 +2999,28 @@
       ) {
         return;
       }
+
+      const sourceFootOffset =
+        ORC_FOOT_OFFSETS[
+          orc.animation
+        ] ??
+        ORC_FOOT_OFFSETS.idle;
+
+      const footOffsetY =
+        sourceFootOffset *
+        ENEMY_SCALE;
+
+      /*
+        ORC 世界座標仍與玩家使用同一地面座標。
+
+        只有 Sprite 繪製位置向下補償，
+        AI、追蹤、攻擊距離與未來碰撞均不受影響。
+      */
+      const screenY =
+        worldToScreenY(
+          orc.y
+        ) +
+        footOffsetY;
 
       const drawWidth =
         frame.width *
@@ -3009,8 +3038,7 @@
       );
 
       /*
-        ORC1 素材的原始預設朝向
-        與玩家素材相反，因此反轉 X 軸。
+        ORC1 原圖預設朝向與玩家相反。
       */
       context.scale(
         -orc.facing,
@@ -3055,7 +3083,7 @@
       context.fillRect(
         16,
         22,
-        294,
+        304,
         168
       );
 
@@ -3078,13 +3106,13 @@
       );
 
       context.fillText(
-        `相機：${Math.round(camera.x)}, ${Math.round(camera.y)}`,
+        `玩家動作：${player.animation}`,
         42,
         103
       );
 
       context.fillText(
-        `視窗：${VIEW_WIDTH} × ${VIEW_HEIGHT}`,
+        `相機：${Math.round(camera.x)}, ${Math.round(camera.y)}`,
         42,
         129
       );
@@ -3096,7 +3124,7 @@
       );
 
       context.fillText(
-        `ORC比例：${ENEMY_SCALE}`,
+        `ORC Anchor：${ORC_FOOT_OFFSETS[orc.animation] ?? 6}px`,
         42,
         181
       );
@@ -3118,14 +3146,10 @@
       drawGround();
 
       if (assetsLoaded) {
-        /*
-          V0.5.1：
-          ORC1 陰影同步放大。
-        */
         drawEntityShadow(
           orc.x,
-          72,
-          16
+          62,
+          13
         );
 
         drawOrc();
@@ -3143,7 +3167,7 @@
     }
 
     /* ==================================================
-       鍵盤輸入
+       鍵盤
     ================================================== */
 
     function getControlFromKey(code) {
@@ -3256,7 +3280,7 @@
     );
 
     /* ==================================================
-       虛擬搖桿
+       搖桿
     ================================================== */
 
     function updateJoystickCenter() {

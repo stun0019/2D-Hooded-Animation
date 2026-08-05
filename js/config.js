@@ -440,7 +440,7 @@ const ENEMY_TYPE_CONFIGS = {
       ORC_EXTRA_FOOT_OFFSET,
 
     spriteFacingMultiplier:
-      -1
+      1
   }
 };
 

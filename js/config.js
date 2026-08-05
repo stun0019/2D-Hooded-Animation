@@ -188,7 +188,7 @@ const PLAYER_INVINCIBLE_TIME =
   玩家攻擊動畫的有效判定影格。
 
   frameIndex 從 0 開始，
-  因此 3～5 代表動畫第 4～6 張。
+  因此 3～5 代表動畫第 4～6張。
 */
 const PLAYER_ATTACK_ACTIVE_START =
   3;
@@ -331,9 +331,6 @@ const ENEMY_TYPE_CONFIGS = {
     extraFootOffset:
       ORC_EXTRA_FOOT_OFFSET,
 
-    /*
-      ORC 原始素材方向和玩家相反。
-    */
     spriteFacingMultiplier:
       -1
   },
@@ -387,6 +384,63 @@ const ENEMY_TYPE_CONFIGS = {
 
     spriteFacingMultiplier:
       -1
+  },
+
+  /*
+    ORC3 目前只有 Idle 素材。
+
+    之後新增 Walk、ATK 素材時，
+    只需更新 assets.js 的動畫定義。
+  */
+  ORC3: {
+    type: "ORC3",
+
+    displayName: "ORC3",
+
+    basePath:
+      "2D_Enemy/ORC3",
+
+    scale:
+      ENEMY_SCALE,
+
+    level:
+      ENEMY_DEFAULT_LEVEL,
+
+    maxHp:
+      ENEMY_BASE_MAX_HP,
+
+    attackDamage:
+      ENEMY_ATTACK_DAMAGE,
+
+    patrolSpeed:
+      ENEMY_PATROL_SPEED,
+
+    chaseSpeed:
+      ENEMY_CHASE_SPEED,
+
+    detectionRange:
+      ENEMY_DETECTION_RANGE,
+
+    attackRange:
+      ENEMY_ATTACK_RANGE,
+
+    attackCooldownDuration:
+      ENEMY_ATTACK_COOLDOWN,
+
+    patrolWaitDuration:
+      ENEMY_PATROL_WAIT_TIME,
+
+    fadeDuration:
+      ENEMY_FADE_DURATION,
+
+    respawnTime:
+      ENEMY_RESPAWN_TIME,
+
+    extraFootOffset:
+      ORC_EXTRA_FOOT_OFFSET,
+
+    spriteFacingMultiplier:
+      -1
   }
 };
 
@@ -395,10 +449,11 @@ const ENEMY_TYPE_CONFIGS = {
 ================================================== */
 
 /*
-  目前生成兩隻敵人：
+  目前生成三隻敵人：
 
   1. ORC1
   2. ORC2
+  3. ORC3
 
   每個生成點都有自己的巡邏區域。
 */
@@ -427,6 +482,19 @@ const ENEMY_SPAWN_CONFIGS = [
     patrolMaxX: 2250,
 
     patrolDirection: 1
+  },
+
+  {
+    id: "orc3-01",
+
+    type: "ORC3",
+
+    spawnX: 2350,
+
+    patrolMinX: 2200,
+    patrolMaxX: 2480,
+
+    patrolDirection: -1
   }
 ];
 
@@ -497,9 +565,6 @@ const player = {
   attacking: false,
   airAttacking: false,
 
-  /*
-    玩家 Hurt 狀態。
-  */
   hurt: false,
 
   animation: "idle",
@@ -526,13 +591,6 @@ const player = {
 
   invincibleTimer: 0,
 
-  /*
-    記錄本次玩家攻擊
-    已命中的敵人 ID。
-
-    同一次攻擊可以命中多隻敵人，
-    但每隻敵人只會被計算一次。
-  */
   attackHitEnemyIds:
     new Set()
 };
@@ -541,25 +599,12 @@ const player = {
    敵人狀態
 ================================================== */
 
-/*
-  敵人會由 orc.js 的
-  initializeEnemies() 建立。
-*/
 const enemies = [];
 
 /* ==================================================
    傷害數字狀態
 ================================================== */
 
-/*
-  每筆資料包含：
-
-  - value
-  - worldX
-  - worldY
-  - elapsed
-  - type
-*/
 const damageNumbers = [];
 
 /* ==================================================

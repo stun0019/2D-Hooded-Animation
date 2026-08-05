@@ -3,7 +3,7 @@
 /*
   Hooded Escape
 
-  玩家動畫、ORC1／ORC2 動畫、
+  玩家動畫、ORC1／ORC2／ORC3 動畫、
   圖片載入與敵人腳底 Anchor 偵測。
 */
 
@@ -114,13 +114,6 @@ const playerAnimationDefinitions = {
     loop: false
   },
 
-  /*
-    玩家受傷動畫。
-
-    素材：
-    2D_Character/Hurt/Hurt01.png
-    2D_Character/Hurt/Hurt02.png
-  */
   hurt: {
     folder: "Hurt",
     prefix: "Hurt",
@@ -139,12 +132,6 @@ const playerAnimationDefinitions = {
    敵人動畫定義
 ================================================== */
 
-/*
-  ORC1 與 ORC2 使用不同素材資料夾。
-
-  ORC2 的 Walk 素材編號為：
-  Walk12.png～Walk17.png
-*/
 const enemyAnimationDefinitions = {
   ORC1: {
     idle: {
@@ -215,10 +202,6 @@ const enemyAnimationDefinitions = {
       loop: true
     },
 
-    /*
-      ORC2 Walk 圖片的原始命名
-      從 Walk12.png 開始。
-    */
     walk: {
       folder: "Walk",
       prefix: "Walk",
@@ -254,6 +237,81 @@ const enemyAnimationDefinitions = {
       frameDuration: 0.085,
       loop: false
     }
+  },
+
+  /*
+    ORC3 目前只有：
+
+    2D_Enemy/ORC3/Idle/Idle01.png
+    2D_Enemy/ORC3/Idle/Idle02.png
+
+    所以 Idle、Walk、Attack
+    暫時全部使用 Idle 素材。
+
+    未來有正式 Walk、ATK 素材後，
+    只需要替換這裡的 folder、
+    prefix 和 frameNumbers。
+  */
+  ORC3: {
+    idle: {
+      folder: "Idle",
+      prefix: "Idle",
+
+      frameNumbers: [
+        1,
+        2
+      ],
+
+      frameDuration: 0.22,
+      loop: true
+    },
+
+    /*
+      ORC3 移動時仍顯示 Idle 動畫。
+    */
+    walk: {
+      folder: "Idle",
+      prefix: "Idle",
+
+      frameNumbers: [
+        1,
+        2
+      ],
+
+      frameDuration: 0.22,
+      loop: true
+    },
+
+    /*
+      ORC3 攻擊時也使用 Idle 素材。
+
+      重複成 8 個動畫影格，
+      是為了配合目前敵人的攻擊判定：
+
+      ENEMY_ATTACK_ACTIVE_START = 3
+      ENEMY_ATTACK_ACTIVE_END = 5
+
+      雖然畫面仍是 Idle，
+      但攻擊判定與攻擊結束流程可以正常運作。
+    */
+    attack: {
+      folder: "Idle",
+      prefix: "Idle",
+
+      frameNumbers: [
+        1,
+        2,
+        1,
+        2,
+        1,
+        2,
+        1,
+        2
+      ],
+
+      frameDuration: 0.085,
+      loop: false
+    }
   }
 };
 
@@ -261,23 +319,8 @@ const enemyAnimationDefinitions = {
    動畫素材容器
 ================================================== */
 
-/*
-  玩家動畫使用方式：
-
-  playerAnimations.idle
-  playerAnimations.walk
-  playerAnimations.hurt
-*/
 const playerAnimations = {};
 
-/*
-  敵人動畫使用方式：
-
-  enemyAnimations.ORC1.idle
-  enemyAnimations.ORC1.walk
-  enemyAnimations.ORC2.idle
-  enemyAnimations.ORC2.walk
-*/
 const enemyAnimations = {};
 
 /* ==================================================
@@ -382,13 +425,6 @@ function calculateSpriteFootOffset(
     return 0;
   }
 
-  /*
-    只掃描圖片中央 30%～70%。
-
-    避免左右兩側的武器、
-    斧頭或其他突出物，
-    被誤判為角色腳底。
-  */
   const startX =
     Math.floor(
       scanCanvas.width *
@@ -466,9 +502,6 @@ function calculateSpriteFootOffset(
     return 0;
   }
 
-  /*
-    回傳圖片最底部透明區域高度。
-  */
   return (
     scanCanvas.height -
     1 -
